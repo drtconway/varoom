@@ -8,6 +8,8 @@
 #include <random>
 #include <set>
 #include <sstream>
+#include <boost/math/distributions/binomial.hpp>
+#include <boost/math/distributions/chi_squared.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/miller_rabin.hpp>
 
@@ -18,70 +20,6 @@ namespace varoom
 {
     namespace detail
     {
-        class bit_counter
-        {
-        public:
-            bit_counter()
-                : m_counts(64), m_n(0)
-            {
-            }
-
-            void add(std::uint64_t p_x)
-            {
-                for (size_t i = 0; i < 64; ++i)
-                {
-                    m_counts[i] += p_x & 1;
-                    p_x >>= 1;
-                }
-                m_n += 1;
-            }
-
-            double chi2() const
-            {
-                double m = 0.5 * m_n;
-
-                double v = 0;
-                for (size_t i = 0; i < 64; ++i)
-                {
-                    double w = m_counts[i] - m;
-                    v += w*w / m;
-                }
-                return v;
-            }
-
-        private:
-            std::vector<std::uint64_t> m_counts;
-            std::uint64_t m_n;
-        };
-
-        template <int B>
-        double chi2(const std::uint64_t& p_x)
-        {
-            const std::uint64_t N = 1 << B;
-            const std::uint64_t M = (N - 1);
-            const std::uint64_t J = 64 / B;
-            size_t cs[N];
-            for (size_t i = 0; i < N; ++i)
-            {
-                cs[i] = 0;
-            }
-            std::uint64_t x = p_x;
-            for (size_t i = 0; i < J; ++i)
-            {
-                cs[x&M] += 1;
-                x >>= B;
-            }
-
-            const double m = double(J) / double(N);
-            double c2 = 0.0;
-            for (size_t i = 0; i < N; ++i)
-            {
-                double d = cs[i] - m;
-                c2 += d*d / m;
-            }
-            return c2;
-        }
-
         std::string as_binary(const std::uint64_t& p_x)
         {
             std::string s;
@@ -120,6 +58,111 @@ namespace varoom
             out << "}";
             return out.str();
         }
+
+        class bit_counter
+        {
+        public:
+            bit_counter()
+                : m_counts(64), m_n(0)
+            {
+            }
+
+            void add(std::uint64_t p_x)
+            {
+                for (size_t i = 0; i < 64; ++i)
+                {
+                    m_counts[i] += p_x & 1;
+                    p_x >>= 1;
+                }
+                m_n += 1;
+            }
+
+            double chi2() const
+            {
+                static boost::math::chi_squared_distribution<double> dist(63);
+
+                double m = 0.5 * m_n;
+
+                double v = 0;
+                for (size_t i = 0; i < 64; ++i)
+                {
+                    double w = m_counts[i] - m;
+                    v += w*w / m;
+                }
+                return cdf(dist, v);
+            }
+
+        private:
+            std::vector<std::uint64_t> m_counts;
+            std::uint64_t m_n;
+        };
+
+        template<int N,int S>
+        class bin_dist
+        {
+        public:
+            bin_dist()
+                : m_bins(N, 0), m_n(0)
+            {
+            }
+
+            void add(const std::uint64_t& p_x)
+            {
+                m_bins[(p_x >> S) & (N-1)] += 1;
+                m_n += 1;
+            }
+
+            std::string dump() const
+            {
+                return as_json(m_bins);
+            }
+
+            double chi2() const
+            {
+                static boost::math::chi_squared_distribution<double> dist(N-1);
+                double m = double(m_n) / double(N);
+
+                double v = 0;
+                for (size_t i = 0; i < N; ++i)
+                {
+                    double w = m_bins[i] - m;
+                    v += w*w / m;
+                }
+                return cdf(dist, v);
+            }
+
+        private:
+            std::vector<size_t> m_bins;
+            std::uint64_t m_n;
+        };
+
+        template <int B>
+        double chi2(const std::uint64_t& p_x)
+        {
+            const std::uint64_t N = 1 << B;
+            const std::uint64_t M = (N - 1);
+            const std::uint64_t J = 64 / B;
+            size_t cs[N];
+            for (size_t i = 0; i < N; ++i)
+            {
+                cs[i] = 0;
+            }
+            std::uint64_t x = p_x;
+            for (size_t i = 0; i < J; ++i)
+            {
+                cs[x&M] += 1;
+                x >>= B;
+            }
+
+            const double m = double(J) / double(N);
+            double c2 = 0.0;
+            for (size_t i = 0; i < N; ++i)
+            {
+                double d = cs[i] - m;
+                c2 += d*d / m;
+            }
+            return c2;
+        }
     }
     // namespace detail
 
@@ -150,18 +193,19 @@ namespace varoom
                 make_coeffs(next);
                 evaluate(next, nextScores);
 
+                if (false && (i & 0x3) == 0)
+                {
+                    BOOST_LOG_TRIVIAL(info) << i << '\t' << detail::as_json(next);
+                    for (size_t j = 0; j < nextScores.size(); ++j)
+                    {
+                        BOOST_LOG_TRIVIAL(info) << i << '\t' << j << '\t' << nextScores[j];
+                    }
+                }
+
                 if (is_better(nextScores, bestScores))
                 {
                     next.swap(best);
                     nextScores.swap(bestScores);
-                }
-                if ((i & 0xf) == 0)
-                {
-                    BOOST_LOG_TRIVIAL(info) << i << '\t' << detail::as_json(best);
-                    for (size_t j = 0; j < bestScores.size(); ++j)
-                    {
-                        BOOST_LOG_TRIVIAL(info) << i << '\t' << j << '\t' << bestScores[j];
-                    }
                 }
             }
             BOOST_LOG_TRIVIAL(info) << "final: " << detail::as_json(best);
@@ -199,12 +243,32 @@ namespace varoom
             //
             {
                 detail::bit_counter b;
+                detail::bin_dist<1024,0> c0;
+                detail::bin_dist<1024,10> c1;
+                detail::bin_dist<1024,20> c2;
+                detail::bin_dist<1024,30> c3;
+                detail::bin_dist<1024,40> c4;
+                detail::bin_dist<1024,50> c5;
                 for (std::uint64_t x = 0; x < 1024*1024; ++x)
                 {
                     std::uint64_t h = H(0, x);
                     b.add(h);
+                    c0.add(h);
+                    c1.add(h);
+                    c2.add(h);
+                    c3.add(h);
+                    c4.add(h);
+                    c5.add(h);
+                    //BOOST_LOG_TRIVIAL(debug) << detail::as_hex(x) << '\t' << detail::as_binary(h);
                 }
                 p_scores.push_back(b.chi2());
+                p_scores.push_back(c0.chi2());
+                p_scores.push_back(c1.chi2());
+                p_scores.push_back(c2.chi2());
+                p_scores.push_back(c3.chi2());
+                p_scores.push_back(c4.chi2());
+                p_scores.push_back(c5.chi2());
+                //BOOST_LOG_TRIVIAL(debug) << c5.dump();
             }
 
             // Test the first million integers with a big prime seed.
@@ -278,12 +342,30 @@ namespace varoom
             //
             {
                 detail::bit_counter b;
+                detail::bin_dist<1024,0> c0;
+                detail::bin_dist<1024,10> c1;
+                detail::bin_dist<1024,20> c2;
+                detail::bin_dist<1024,30> c3;
+                detail::bin_dist<1024,40> c4;
+                detail::bin_dist<1024,50> c5;
                 for (size_t i = 0; i < m_strings.size(); ++i)
                 {
                     std::uint64_t h = H(0, m_strings[i]);
                     b.add(h);
+                    c0.add(h);
+                    c1.add(h);
+                    c2.add(h);
+                    c3.add(h);
+                    c4.add(h);
+                    c5.add(h);
                 }
                 p_scores.push_back(b.chi2());
+                p_scores.push_back(c0.chi2());
+                p_scores.push_back(c1.chi2());
+                p_scores.push_back(c2.chi2());
+                p_scores.push_back(c3.chi2());
+                p_scores.push_back(c4.chi2());
+                p_scores.push_back(c5.chi2());
             }
 
             // Test the strings with a big prime seed.
@@ -313,10 +395,11 @@ namespace varoom
             double r = 0;
             for (size_t i = 0; i < p_lhs.size(); ++i)
             {
-                l += p_lhs[i];
-                r += p_rhs[i];
+                l += std::log(p_lhs[i]);
+                r += std::log(p_rhs[i]);
             }
-            return l < r;
+            BOOST_LOG_TRIVIAL(debug) << "lhs\t" << (-2*l) << "\trhs\t" << (-2*r);
+            return (-2*l) < (-2*r);
         }
 
         std::uint64_t getPrime(size_t p_idx)

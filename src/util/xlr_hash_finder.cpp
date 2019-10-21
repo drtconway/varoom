@@ -33,7 +33,7 @@ int main(int argc, const char** argv)
     read_strings(argv[1], s);
     xlr_hash_finder f(2, 19, s);
     vector<uint64_t> coeffs;
-    f.find(1000, coeffs);
+    f.find(128, coeffs);
     cout << varoom::detail::as_json(coeffs) << endl;
     return 0;
 }
