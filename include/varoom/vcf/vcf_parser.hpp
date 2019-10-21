@@ -43,7 +43,7 @@ namespace varoom
                     parts.clear();
                     ll.split('\t', parts);
 
-                    if (parts.size() < 9)
+                    if (parts.size() < 7)
                     {
                         m_handler.error(line_no, l, "parse error");
                         continue;
@@ -61,8 +61,13 @@ namespace varoom
                     filter = parts[6];
                     info = vcf_info(parts[7]);
 
-                
                     genotypes.clear();
+                    for (size_t i = 9; i < parts.size(); ++i)
+                    {
+                        genotypes.push_back(vcf_info(parts[8], parts[i]));
+                    }
+
+                    m_handler(chr, pos, id, ref, alt, qual, filter, info, genotypes);
                 }
             }
 
