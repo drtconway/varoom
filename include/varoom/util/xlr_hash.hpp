@@ -10,8 +10,9 @@ namespace varoom
     template<unsigned long long X, unsigned long long L, unsigned long long R>
     void hash_block(std::uint64_t& p_h)
     {
-        p_h ^= X;
-        p_h ^= (p_h << L) | (p_h >> R);
+        p_h *= X;
+        p_h ^= (p_h << L) | (p_h >> (64 - L));
+        p_h ^= (p_h >> R) | (p_h << (64 - R));
     }
 
     template<unsigned long long X, unsigned long long L, unsigned long long R, unsigned long long Y, unsigned long long... More>
