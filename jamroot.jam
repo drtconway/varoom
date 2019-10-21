@@ -4,6 +4,12 @@ import testing ;
 project : requirements <include>include/ ;
 
 lib boost_test : : <name>boost_unit_test_framework ;
+lib boost_log : : <name>boost_log ;
+lib pthread : : <name>pthread ;
+
+exe xlr_hash_finder
+    : src/util/xlr_hash_finder.cpp boost_log pthread
+    ;
 
 unit-test test_subtext
     : tests/util/test_subtext.cpp boost_test
