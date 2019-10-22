@@ -132,7 +132,7 @@ namespace varoom
             }
 
         private:
-            std::vector<size_t> m_bins;
+            std::vector<std::uint64_t> m_bins;
             std::uint64_t m_n;
         };
 

@@ -29,18 +29,55 @@ namespace varoom
                     p_handler.ins(m[1], boost::lexical_cast<std::int64_t>(m[2]), boost::lexical_cast<std::int64_t>(m[3]), m[4]);
                     return;
                 }
-                //const std::regex pieces_regex("([a-z]+)\\.([a-z]+)");
-                //std::smatch pieces_match;
-                //if (std::regex_match(fname, pieces_match, pieces_regex)) {
-                //    std::cout << fname << '\n';
-                //    for (size_t i = 0; i < pieces_match.size(); ++i) {
-                //        std::ssub_match sub_match = pieces_match[i];
-                //        std::string piece = sub_match.str();
-                //        std::cout << "  submatch " << i << ": " << piece << '\n';
-                //    }   
-                //}   
+                if (std::regex_match(p_txt, m, hgvsgDel1()))
+                {
+                    std::int64_t first = boost::lexical_cast<std::int64_t>(m[2]);
+                    p_handler.del(m[1], first, first);
+                    return;
+                }
+                if (std::regex_match(p_txt, m, hgvsgDel2()))
+                {
+                    std::int64_t first = boost::lexical_cast<std::int64_t>(m[2]);
+                    std::int64_t last = boost::lexical_cast<std::int64_t>(m[3]);
+                    p_handler.del(m[1], first, last);
+                    return;
+                }
+                if (std::regex_match(p_txt, m, hgvsgDelIns1()))
+                {
+                    std::int64_t first = boost::lexical_cast<std::int64_t>(m[2]);
+                    p_handler.delins(m[1], first, first, m[3]);
+                    return;
+                }
+                if (std::regex_match(p_txt, m, hgvsgDelIns2()))
+                {
+                    std::int64_t first = boost::lexical_cast<std::int64_t>(m[2]);
+                    std::int64_t last = boost::lexical_cast<std::int64_t>(m[3]);
+                    p_handler.delins(m[1], first, last, m[4]);
+                    return;
+                }
+                if (std::regex_match(p_txt, m, hgvsgDup1()))
+                {
+                    std::int64_t first = boost::lexical_cast<std::int64_t>(m[2]);
+                    p_handler.dup(m[1], first, first);
+                    return;
+                }
+                if (std::regex_match(p_txt, m, hgvsgDup2()))
+                {
+                    std::int64_t first = boost::lexical_cast<std::int64_t>(m[2]);
+                    std::int64_t last = boost::lexical_cast<std::int64_t>(m[3]);
+                    p_handler.dup(m[1], first, last);
+                    return;
+                }
+                if (std::regex_match(p_txt, m, hgvsgInv()))
+                {
+                    std::int64_t first = boost::lexical_cast<std::int64_t>(m[2]);
+                    std::int64_t last = boost::lexical_cast<std::int64_t>(m[3]);
+                    p_handler.inv(m[1], first, last);
+                    return;
+                }
             }
         private:
+
             static constexpr const char* accPat = "([^:]+)";
             static constexpr const char* gPosPat = "([0-9]+)";
             static constexpr const char* cPosPat = "(([-*]?)([0-9]+)([-+]?[0-9]+)?)";
@@ -69,13 +106,46 @@ namespace varoom
                 static std::regex r(compose({accPat, ":g[.]", gPosPat, "_", gPosPat, "ins", "([ACGTacgt]+)"}));
                 return r;
             }
-            //static const char* hgvsgDel1 = Pattern.compile(accPat + ":g[.]" + gPosPat + "del" + "([ACGTacgtNn]*)");
-            //static const char* hgvsgDel2 = Pattern.compile(accPat + ":g[.]" + gPosPat + "_" + gPosPat + "del" + "([ACGTacgtNn]*)");
-            //static const char* hgvsgDelIns1 = Pattern.compile(accPat + ":g[.]" + gPosPat + "delins" + "([ACGTacgt]+)");
-            //static const char* hgvsgDelIns2 = Pattern.compile(accPat + ":g[.]" + gPosPat + "_" + gPosPat + "delins" + "([ACGTacgt]+)");
-            //static const char* hgvsgDup1 = Pattern.compile(accPat + ":g[.]" + gPosPat + "dup" + "([ACGTacgt]*)");
-            //static const char* hgvsgDup2 = Pattern.compile(accPat + ":g[.]" + gPosPat + "_" + gPosPat + "dup" + "([ACGTacgt]*)");
-            //static const char* hgvsgInv = Pattern.compile(accPat + ":g[.]" + gPosPat + "_" + gPosPat + "inv" + "([ACGTacgt]*)");
+
+            static const std::regex& hgvsgDel1()
+            {
+                static std::regex r(compose({accPat, ":g[.]", gPosPat, "del", "([ACGTacgtNn]*)"}));
+                return r;
+            }
+            static const std::regex& hgvsgDel2()
+            {
+                static std::regex r(compose({accPat, ":g[.]", gPosPat, "_", gPosPat, "del", "([ACGTacgtNn]*)"}));
+                return r;
+            }
+
+            static const std::regex& hgvsgDelIns1()
+            {
+                static std::regex r(compose({accPat, ":g[.]", gPosPat, "delins", "([ACGTacgt]+)"}));
+                return r;
+            }
+            static const std::regex& hgvsgDelIns2()
+            {
+                static std::regex r(compose({accPat, ":g[.]", gPosPat, "_", gPosPat, "delins", "([ACGTacgt]+)"}));
+                return r;
+            }
+
+            static const std::regex& hgvsgDup1()
+            {
+                static std::regex r(compose({accPat, ":g[.]", gPosPat, "dup", "([ACGTacgt]*)"}));
+                return r;
+            }
+            static const std::regex& hgvsgDup2()
+            {
+                static std::regex r(compose({accPat, ":g[.]", gPosPat, "_", gPosPat, "dup", "([ACGTacgt]*)"}));
+                return r;
+            }
+
+            static const std::regex& hgvsgInv()
+            {
+                static std::regex r(compose({accPat, ":g[.]", gPosPat, "_", gPosPat, "inv", "([ACGTacgt]*)"}));
+                return r;
+            }
+
             //static const char* hgvsgRep = Pattern.compile(accPat + ":g[.]" + gPosPat + "([ACGTacgt]+)\\[([0-9]+)\\]");
             //static const char* hgvsgSil1 = Pattern.compile(accPat + ":g[.]" + gPosPat + "=" + "([ACGTacgt]?)");
             //static const char* hgvsgSil2 = Pattern.compile(accPat + ":g[.]" + gPosPat + "_" + gPosPat + "=" + "([ACGTacgt]*)");

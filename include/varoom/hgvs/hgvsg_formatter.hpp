@@ -31,18 +31,43 @@ namespace varoom
 
             virtual void del(const std::string& p_chr, const std::int64_t p_first, const std::int64_t p_last)
             {
+                if (p_first == p_last)
+                {
+                    m_consumer(p_chr + ":g." + std::to_string(p_first) + "del");
+                }
+                else
+                {
+                    m_consumer(p_chr + ":g." + std::to_string(p_first) + "_" + std::to_string(p_last) + "del");
+                }
             }
 
             virtual void delins(const std::string& p_chr, const std::int64_t p_first, const std::int64_t p_last, const std::string& p_seq)
             {
+                if (p_first == p_last)
+                {
+                    m_consumer(p_chr + ":g." + std::to_string(p_first) + "delins" + p_seq);
+                }
+                else
+                {
+                    m_consumer(p_chr + ":g." + std::to_string(p_first) + "_" + std::to_string(p_last) + "delins" + p_seq);
+                }
             }
 
             virtual void dup(const std::string& p_chr, const std::int64_t p_first, const std::int64_t p_last)
             {
+                if (p_first == p_last)
+                {
+                    m_consumer(p_chr + ":g." + std::to_string(p_first) + "dup");
+                }
+                else
+                {
+                    m_consumer(p_chr + ":g." + std::to_string(p_first) + "_" + std::to_string(p_last) + "dup");
+                }
             }
 
             virtual void inv(const std::string& p_chr, const std::int64_t p_first, const std::int64_t p_last)
             {
+                m_consumer(p_chr + ":g." + std::to_string(p_first) + "_" + std::to_string(p_last) + "inv");
             }
 
         private:
