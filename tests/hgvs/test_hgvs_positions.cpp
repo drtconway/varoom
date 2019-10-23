@@ -9,11 +9,11 @@ BOOST_AUTO_TEST_CASE( testGenomic )
     using namespace std;
     using namespace varoom::hgvs;
 
-    gpos_0 g0(12345);
+    genomic_locus g0(12345);
     BOOST_CHECK_EQUAL(g0(), 12345);
-    gpos_1 g1 = static_cast<gpos_1>(g0);
+    hgvsg_locus g1 = static_cast<hgvsg_locus>(g0);
     BOOST_CHECK_EQUAL(g1(), 12346);
-    gpos_0 g2 = static_cast<gpos_0>(g1);
+    genomic_locus g2 = static_cast<genomic_locus>(g1);
     BOOST_CHECK_EQUAL(g2(), 12345);
 
 }

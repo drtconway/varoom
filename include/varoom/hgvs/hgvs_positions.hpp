@@ -11,66 +11,83 @@ namespace varoom
 {
     namespace hgvs
     {
-        struct gpos_0_tag;
-        typedef scalar<gpos_0_tag> gpos_0;
+        // The type genomic_locus is for referring to a 0-based
+        // position in a genomic reference sequence.
+        //
+        struct genomic_locus_tag;
+        typedef scalar<genomic_locus_tag> genomic_locus;
 
-        struct gpos_1_tag;
-        typedef scalar<gpos_1_tag> gpos_1;
+        // The type hgvsg_locus is for referring to a 1-based
+        // position in a genomic reference sequence, a la HGVSg.
+        //
+        struct hgvsg_locus_tag;
+        typedef scalar<hgvsg_locus_tag> hgvsg_locus;
 
-        struct txpos_0_tag;
-        typedef scalar<txpos_0_tag> txpos_0;
+        // The type tx_position is for referring to a 0-based position
+        // in a transcript relative to the start codon for coding transcripts,
+        // or the transcription start for non-coding transcripts.
+        //
+        struct tx_position_tag;
+        typedef scalar<tx_position_tag> tx_position;
 
-        struct txpos_1_tag;
-        typedef scalar<txpos_1_tag> txpos_1;
+        // The type hgvsc_position is for referring to the 1-based position 
+        // in a transcript relative to the start codon for coding transcripts,
+        // or the transcription start for non-coding transcripts.
+        // Note that negative positions refer to the 5' UTR, and there is no
+        // directed representation for intronic positions. This is why there
+        // is a separate type hgvsc_locus.
+        //
+        struct hgvsc_position_tag;
+        typedef scalar<hgvsc_position_tag> hgvsc_position;
     }
     // namespace hgvs
 
     template<>
-    struct scalar_conversions<hgvs::gpos_0_tag,hgvs::gpos_1_tag>
+    struct scalar_conversions<hgvs::genomic_locus_tag,hgvs::hgvsg_locus_tag>
     {
-        static scalar<hgvs::gpos_1_tag> cast(const scalar<hgvs::gpos_0_tag>& p_x)
+        static scalar<hgvs::hgvsg_locus_tag> cast(const scalar<hgvs::genomic_locus_tag>& p_x)
         {
-            return scalar<hgvs::gpos_1_tag>(p_x() + 1);
+            return scalar<hgvs::hgvsg_locus_tag>(p_x() + 1);
         }
     };
 
     template<>
-    struct scalar_conversions<hgvs::gpos_1_tag,hgvs::gpos_0_tag>
+    struct scalar_conversions<hgvs::hgvsg_locus_tag,hgvs::genomic_locus_tag>
     {
-        static scalar<hgvs::gpos_0_tag> cast(const scalar<hgvs::gpos_1_tag>& p_x)
+        static scalar<hgvs::genomic_locus_tag> cast(const scalar<hgvs::hgvsg_locus_tag>& p_x)
         {
-            return scalar<hgvs::gpos_0_tag>(p_x() - 1);
+            return scalar<hgvs::genomic_locus_tag>(p_x() - 1);
         }
     };
 
     template<>
-    struct scalar_conversions<hgvs::txpos_0_tag,hgvs::txpos_1_tag>
+    struct scalar_conversions<hgvs::tx_position_tag,hgvs::hgvsc_position_tag>
     {
-        static scalar<hgvs::txpos_1_tag> cast(const scalar<hgvs::txpos_0_tag>& p_x)
+        static scalar<hgvs::hgvsc_position_tag> cast(const scalar<hgvs::tx_position_tag>& p_x)
         {
             if (p_x() >= 0)
             {
-                return scalar<hgvs::txpos_1_tag>(p_x() + 1);
+                return scalar<hgvs::hgvsc_position_tag>(p_x() + 1);
             }
             else
             {
-                return scalar<hgvs::txpos_1_tag>(p_x());
+                return scalar<hgvs::hgvsc_position_tag>(p_x());
             }
         }
     };
 
     template<>
-    struct scalar_conversions<hgvs::txpos_1_tag,hgvs::txpos_0_tag>
+    struct scalar_conversions<hgvs::hgvsc_position_tag,hgvs::tx_position_tag>
     {
-        static scalar<hgvs::txpos_0_tag> cast(const scalar<hgvs::txpos_1_tag>& p_x)
+        static scalar<hgvs::tx_position_tag> cast(const scalar<hgvs::hgvsc_position_tag>& p_x)
         {
             if (p_x() > 0)
             {
-                return scalar<hgvs::txpos_0_tag>(p_x() - 1);
+                return scalar<hgvs::tx_position_tag>(p_x() - 1);
             }
             if (p_x() < 0)
             {
-                return scalar<hgvs::txpos_0_tag>(p_x());
+                return scalar<hgvs::tx_position_tag>(p_x());
             }
             throw std::invalid_argument("1-offset transcript positions cannot be 0");
         }

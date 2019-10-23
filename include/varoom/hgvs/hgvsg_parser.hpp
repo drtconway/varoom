@@ -80,9 +80,6 @@ namespace varoom
 
             static constexpr const char* accPat = "([^:]+)";
             static constexpr const char* gPosPat = "([0-9]+)";
-            static constexpr const char* cPosPat = "(([-*]?)([0-9]+)([-+]?[0-9]+)?)";
-            static constexpr const char* pPosPat = "([0-9]+)";
-            static constexpr const char* aaPat = "([A-Z][a-z][a-z]|[*])";
 
             static std::string compose(std::initializer_list<const char*> p_parts)
             {

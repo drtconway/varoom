@@ -33,6 +33,16 @@ namespace varoom
             return scalar_conversions<Tag,ResTag>::cast(*this);
         }
 
+        bool operator==(const scalar& p_other) const
+        {
+            return m_value == p_other.m_value;
+        }
+
+        bool operator<(const scalar& p_other) const
+        {
+            return m_value < p_other.m_value;
+        }
+
     private:
         const std::int64_t m_value;
     };

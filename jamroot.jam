@@ -19,6 +19,14 @@ unit-test test_hgvsg_parser
     : tests/hgvs/test_hgvsg_parser.cpp boost_test
     ;
 
+unit-test test_fasta
+    : tests/seq/test_fasta.cpp boost_test
+    ;
+
+unit-test test_fastq
+    : tests/seq/test_fastq.cpp boost_test
+    ;
+
 unit-test test_vcf_info
     : tests/vcf/test_vcf_info.cpp boost_test
     ;

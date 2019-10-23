@@ -1,10 +1,16 @@
 #ifndef VAROOM_SEQ_FASTA_HPP
 #define VAROOM_SEQ_FASTA_HPP
 
+#include <istream>
+#include <string>
+#include <boost/algorithm/string/trim.hpp>
+
 namespace varoom
 {
     namespace seq
     {
+        typedef std::pair<std::string,std::string> fasta_read;
+
         class fasta_reader
         {
         public:
@@ -14,12 +20,12 @@ namespace varoom
                 next();
             }
 
-            operator bool ()
+            bool more() const
             {
                 return m_more;
             }
 
-            const std::pair<std::string,std::string> operator*() const
+            const fasta_read& operator*() const
             {
                 return m_curr;
             }
@@ -37,19 +43,19 @@ namespace varoom
                     m_more = false;
                     return;
                 }
-                if (!m_next.starts_with('>'))
+                if (!starts_with(m_next, '>'))
                 {
                     m_more = false;
                     throw std::domain_error("missing header line.");
                 }
 
-                m_curr.first.clear()
+                m_curr.first.clear();
                 m_curr.second.clear();
 
                 boost::algorithm::trim(m_next);
                 m_curr.first.insert(m_curr.first.end(), m_next.begin() + 1, m_next.end()); // drop the >
 
-                while (std::getline(m_in, m_next) && !m_next.starts_with('>'))
+                while (std::getline(m_in, m_next) && !starts_with(m_next, '>'))
                 {
                     // Technically, FASTA data may contain whitespace, so we should use code like:
                     //      str.erase(remove_if(str.begin(), str.end(), isspace), str.end());
@@ -59,10 +65,15 @@ namespace varoom
                 }
             }
 
+            static bool starts_with(const std::string& p_str, char p_ch)
+            {
+                return p_str.size() > 0 && p_str.front() == p_ch;
+            }
+
             std::istream& m_in;
             bool m_more;
             std::string m_next;
-            std::pair<std::string,std::string> m_curr;
+            fasta_read m_curr;
         };
     }
     // namespace seq
