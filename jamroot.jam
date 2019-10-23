@@ -5,10 +5,19 @@ project : requirements <include>include/ ;
 
 lib boost_test : : <name>boost_unit_test_framework ;
 lib boost_log : : <name>boost_log ;
+lib boost_iostreams : : <name>boost_iostreams ;
 lib pthread : : <name>pthread ;
+
+exe kmers_count
+    : src/kmers/count.cpp boost_iostreams
+    ;
 
 exe xlr_hash_finder
     : src/util/xlr_hash_finder.cpp boost_log pthread
+    ;
+
+unit-test test_kmers
+    : tests/test_kmers.cpp boost_test
     ;
 
 unit-test test_hgvs_positions
