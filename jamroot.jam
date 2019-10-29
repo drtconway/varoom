@@ -8,8 +8,8 @@ lib boost_log : : <name>boost_log ;
 lib boost_iostreams : : <name>boost_iostreams ;
 lib pthread : : <name>pthread ;
 
-exe klbam
-    : src/klbam.cpp boost_iostreams
+exe process_bam
+    : src/klbam/process_bam.cpp boost_iostreams
     ;
 
 exe kmers_count
@@ -34,6 +34,10 @@ unit-test test_hgvsg_parser
 
 unit-test test_sam_pileup
     : tests/sam/test_pileup.cpp boost_test
+    ;
+
+unit-test test_sam_reader
+    : tests/sam/test_sam_reader.cpp boost_test
     ;
 
 unit-test test_fasta

@@ -19,6 +19,15 @@ namespace varoom
     };
     typedef std::shared_ptr<input_file_holder> input_file_holder_ptr;
 
+    class output_file_holder
+    {
+    public:
+        virtual std::ostream& operator*() = 0;
+
+        virtual ~output_file_holder() {}
+    };
+    typedef std::shared_ptr<output_file_holder> output_file_holder_ptr;
+
     namespace detail
     {
         class cin_file_holder : public input_file_holder
@@ -30,10 +39,19 @@ namespace varoom
             };
         };
 
-        class plain_file_holder : public input_file_holder
+        class cout_file_holder : public output_file_holder
         {
         public:
-            plain_file_holder(const std::string& p_name)
+            std::ostream& operator*()
+            {
+                return std::cout;
+            };
+        };
+
+        class plain_input_file_holder : public input_file_holder
+        {
+        public:
+            plain_input_file_holder(const std::string& p_name)
                 : m_file(p_name)
             {
             }
@@ -47,10 +65,27 @@ namespace varoom
             std::ifstream m_file;
         };
 
-        class gzip_file_holder : public input_file_holder
+        class plain_output_file_holder : public output_file_holder
         {
         public:
-            gzip_file_holder(const std::string& p_name)
+            plain_output_file_holder(const std::string& p_name)
+                : m_file(p_name)
+            {
+            }
+
+            std::ostream& operator*()
+            {
+                return m_file;
+            }
+
+        private:
+            std::ofstream m_file;
+        };
+
+        class gzip_input_file_holder : public input_file_holder
+        {
+        public:
+            gzip_input_file_holder(const std::string& p_name)
                 : m_file(p_name, std::ios_base::in | std::ios_base::binary)
             {
                 m_filter.push(m_gzip);
@@ -67,6 +102,27 @@ namespace varoom
             boost::iostreams::gzip_decompressor m_gzip;
             boost::iostreams::filtering_istream m_filter;
         };
+
+        class gzip_output_file_holder : public output_file_holder
+        {
+        public:
+            gzip_output_file_holder(const std::string& p_name)
+                : m_file(p_name, std::ios_base::in | std::ios_base::binary)
+            {
+                m_filter.push(m_gzip);
+                m_filter.push(m_file);
+            }
+
+            std::ostream& operator*()
+            {
+                return m_filter;
+            }
+
+        private:
+            std::ofstream m_file;
+            boost::iostreams::gzip_compressor m_gzip;
+            boost::iostreams::filtering_ostream m_filter;
+        };
     }
     // namespace detail
 
@@ -81,9 +137,22 @@ namespace varoom
             }
             if (ends_with(p_name, ".gz"))
             {
-                return input_file_holder_ptr(new detail::gzip_file_holder(p_name));
+                return input_file_holder_ptr(new detail::gzip_input_file_holder(p_name));
             }
-            return input_file_holder_ptr(new detail::plain_file_holder(p_name));
+            return input_file_holder_ptr(new detail::plain_input_file_holder(p_name));
+        }
+
+        static output_file_holder_ptr out(const std::string& p_name)
+        {
+            if (p_name == "-")
+            {
+                return output_file_holder_ptr(new detail::cout_file_holder);
+            }
+            if (ends_with(p_name, ".gz"))
+            {
+                return output_file_holder_ptr(new detail::gzip_output_file_holder(p_name));
+            }
+            return output_file_holder_ptr(new detail::plain_output_file_holder(p_name));
         }
 
     private:
