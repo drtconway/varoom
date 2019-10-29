@@ -167,7 +167,6 @@ namespace varoom
             }
 
             boost::algorithm::trim(m_line);
-            m_parts.clear();
             subtext st(m_line);
             st.split('\t', m_parts);
             m_curr.name.clear();

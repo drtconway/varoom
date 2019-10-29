@@ -53,6 +53,7 @@ namespace varoom
 
         void split(char p_x, std::vector<subtext>& p_res, bool p_include_empty = true) const
         {
+            p_res.clear();
             std::string::const_iterator prev = first;
             while (true)
             {
