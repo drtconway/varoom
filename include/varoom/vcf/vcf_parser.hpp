@@ -5,6 +5,8 @@
 #include "varoom/vcf/vcf_handler.hpp"
 #endif
 
+#include <iostream>
+
 namespace varoom
 {
     namespace vcf
@@ -20,7 +22,7 @@ namespace varoom
             void parse(std::istream& p_in)
             {
                 std::string l;
-                vector<subtext> parts;
+                std::vector<subtext> parts;
                 std::string chr;
                 std::int64_t pos;
                 std::string id;
@@ -31,11 +33,14 @@ namespace varoom
                 vcf_info info;
                 std::vector<vcf_info> genotypes;
 
+                std::cerr << "ping!" << std::endl;
                 size_t line_no = 0;
                 while (std::getline(p_in, l))
                 {
+                    std::cerr << l << std::endl;
                     ++line_no;
-                    if (l.starts_with('#'))
+                    m_handler.error(line_no, l, "ping");
+                    if (starts_with(l, '#'))
                     {
                         continue;
                     }
@@ -49,15 +54,11 @@ namespace varoom
                         continue;
                     }
                     chr = parts[0];
-                    if (!boost::conversion::type_lexical_convert(parts[1], pos))
-                    {
-                        m_handler.error(line_no, l, "could not convert position");
-                        continue;
-                    }
+                    pos = boost::lexical_cast<std::int64_t>(boost::make_iterator_range(parts[1].first, parts[1].second));
                     id = parts[2];
                     ref = parts[3];
                     alt = parts[4];
-                    qual = parts[5];
+                    qual = boost::lexical_cast<double>(boost::make_iterator_range(parts[5].first, parts[5].second));
                     filter = parts[6];
                     info = vcf_info(parts[7]);
 
@@ -72,6 +73,11 @@ namespace varoom
             }
 
         private:
+            static bool starts_with(const std::string& p_str, char p_ch)
+            {
+                return p_str.size() > 0 && p_str.front() == p_ch;
+            }
+
             vcf_handler& m_handler;
         };
     }

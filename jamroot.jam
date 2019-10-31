@@ -8,6 +8,10 @@ lib boost_log : : <name>boost_log ;
 lib boost_iostreams : : <name>boost_iostreams ;
 lib pthread : : <name>pthread ;
 
+exe profile_vcfs
+    : src/klbam/profile_vcfs.cpp boost_iostreams
+    ;
+
 exe process_bam
     : src/klbam/process_bam.cpp boost_iostreams
     ;

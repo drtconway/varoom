@@ -1,5 +1,5 @@
-#ifndef VAROOM_VCF_VCF_HANDLER_HPP
-#define VAROOM_VCF_VCF_HANDLER_HPP
+#ifndef VAROOM_VCF_VCF_INFO_HPP
+#define VAROOM_VCF_VCF_INFO_HPP
 
 #include <boost/lexical_cast.hpp>
 
@@ -14,6 +14,10 @@ namespace varoom
         class vcf_info
         {
         public:
+            vcf_info()
+            {
+            }
+
             vcf_info(const subtext& p_source)
             {
                 m_sources.push_back(p_source);
@@ -41,7 +45,7 @@ namespace varoom
             bool get(const std::string& p_id, T& p_val) const
             {
                 scan_if_necessary();
-                size_t i = find(p_id);
+                int i = find(p_id);
                 if (i < 0)
                 {
                     return false;
@@ -54,7 +58,7 @@ namespace varoom
             bool get(const std::string& p_id, std::vector<T>& p_vals, char p_sep) const
             {
                 scan_if_necessary();
-                size_t i = find(p_id);
+                int i = find(p_id);
                 if (i < 0)
                 {
                     return false;
@@ -69,7 +73,7 @@ namespace varoom
             }
 
         private:
-            size_t find(const std::string& p_id) const
+            int find(const std::string& p_id) const
             {
                 scan_if_necessary();
                 for (size_t i = 0; i < m_keys.size(); ++i)
@@ -115,6 +119,31 @@ namespace varoom
                 }
                 else
                 {
+                    std::vector<subtext> key_parts;
+                    std::vector<subtext> val_parts;
+                    std::vector<subtext> subparts;
+
+                    m_sources[0].split(':', key_parts);
+                    m_sources[1].split(':', val_parts);
+                    
+                    for (size_t i = 0; i < key_parts.size(); ++i)
+                    {
+                        subparts.clear();
+                        parts[i].split('=', subparts);
+                        if (subparts.size() < 2)
+                        {
+                            // malformed.
+                            // TODO: figure out a better strategy than just skipping it.
+                            //
+                            continue;
+                        }
+                        if (subparts.size() > 2)
+                        {
+                            subparts[1].second = subparts.back().second;
+                        }
+                        m_keys.push_back(subparts[0]);
+                        m_vals.push_back(subparts[1]);
+                    }
                 }
             }
 
@@ -127,4 +156,4 @@ namespace varoom
 }
 // namespace varoom
 
-#endif // VAROOM_VCF_VCF_HANDLER_HPP
+#endif // VAROOM_VCF_VCF_INFO_HPP

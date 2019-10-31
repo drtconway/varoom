@@ -62,10 +62,10 @@ namespace // anonymous
         const regions& m_regions;
     };
 
-    class process_bam : public command
+    class process_sam : public command
     {
     public:
-        process_bam(const string& p_src_filename, const string& p_dest_filename, const regions& p_regions)
+        process_sam(const string& p_src_filename, const string& p_dest_filename, const regions& p_regions)
             : m_src_filename(p_src_filename), m_dest_filename(p_dest_filename), m_regions(p_regions)
         {
         }
@@ -131,6 +131,6 @@ int main(int argc, const char** argv)
     R["18"].push_back(range(60795804, 60796044));
     R["18"].push_back(range(60985260, 60985920));
 
-    process_bam P(argv[1], argv[2], R);
+    process_sam P(argv[1], argv[2], R);
     P();
 }
