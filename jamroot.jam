@@ -8,13 +8,13 @@ lib boost_log : : <name>boost_log ;
 lib boost_iostreams : : <name>boost_iostreams ;
 lib pthread : : <name>pthread ;
 
-exe profile_vcfs
-    : src/klbam/profile_vcfs.cpp boost_iostreams
-    ;
+#exe profile_vcfs
+#    : src/klbam/profile_vcfs.cpp boost_iostreams
+#    ;
 
-exe process_bam
-    : src/klbam/process_bam.cpp boost_iostreams
-    ;
+#exe process_bam
+#    : src/klbam/process_bam.cpp boost_iostreams
+#    ;
 
 exe kmers_count
     : src/kmers/count.cpp boost_iostreams
@@ -66,4 +66,8 @@ unit-test test_xlr_hash
 
 unit-test test_vcf_data
     : tests/vcf/test_vcf_data.cpp boost_test
+    ;
+
+unit-test test_vcf_parser
+    : tests/vcf/test_vcf_parser.cpp boost_test
     ;

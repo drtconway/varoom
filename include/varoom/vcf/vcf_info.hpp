@@ -121,28 +121,19 @@ namespace varoom
                 {
                     std::vector<subtext> key_parts;
                     std::vector<subtext> val_parts;
-                    std::vector<subtext> subparts;
 
                     m_sources[0].split(':', key_parts);
                     m_sources[1].split(':', val_parts);
                     
+                    if (key_parts.size() != val_parts.size())
+                    {
+                        throw std::runtime_error("format & genotype fields do not match");
+                    }
+
                     for (size_t i = 0; i < key_parts.size(); ++i)
                     {
-                        subparts.clear();
-                        parts[i].split('=', subparts);
-                        if (subparts.size() < 2)
-                        {
-                            // malformed.
-                            // TODO: figure out a better strategy than just skipping it.
-                            //
-                            continue;
-                        }
-                        if (subparts.size() > 2)
-                        {
-                            subparts[1].second = subparts.back().second;
-                        }
-                        m_keys.push_back(subparts[0]);
-                        m_vals.push_back(subparts[1]);
+                        m_keys.push_back(key_parts[i]);
+                        m_vals.push_back(val_parts[i]);
                     }
                 }
             }

@@ -33,13 +33,10 @@ namespace varoom
                 vcf_info info;
                 std::vector<vcf_info> genotypes;
 
-                std::cerr << "ping!" << std::endl;
                 size_t line_no = 0;
                 while (std::getline(p_in, l))
                 {
-                    std::cerr << l << std::endl;
                     ++line_no;
-                    m_handler.error(line_no, l, "ping");
                     if (starts_with(l, '#'))
                     {
                         continue;

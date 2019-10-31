@@ -126,6 +126,19 @@ BOOST_AUTO_TEST_CASE( test4 )
     const std::string fmt = "GT:AD:DP:GQ:PL:PMCAD:PMCADF:PMCADR:PMCBDIR:PMCDP:PMCFREQ:PMCRD:PMCRDF:PMCRDR";
     const std::string gtp = "0/1:159,177:336:99:5091,0,4233:196:103:93:Y:372:0.53:175:91:84";
     vcf_info ifo(fmt, gtp);
-    BOOST_CHECK_EQUAL(ifo.size(), 18);
+    BOOST_CHECK_EQUAL(ifo.size(), 14);
 
+    string z;
+    BOOST_CHECK_EQUAL(ifo.get("GT", z), true);
+    BOOST_CHECK_EQUAL(z, "0/1");
+
+    int64_t x;
+    BOOST_CHECK_EQUAL(ifo.get("DP", x), true);
+    BOOST_CHECK_EQUAL(x, 336);
+
+    vector<int64_t> xs;
+    BOOST_CHECK_EQUAL(ifo.get("AD", xs, ','), true);
+    BOOST_CHECK_EQUAL(xs.size(), 2);
+    BOOST_CHECK_EQUAL(xs[0], 159);
+    BOOST_CHECK_EQUAL(xs[1], 177);
 }
