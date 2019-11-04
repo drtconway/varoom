@@ -6,7 +6,12 @@ project : requirements <include>include/ ;
 lib boost_test : : <name>boost_unit_test_framework ;
 lib boost_log : : <name>boost_log ;
 lib boost_iostreams : : <name>boost_iostreams ;
+lib boost_program_options : : <name>boost_program_options ;
 lib pthread : : <name>pthread ;
+
+exe klbam
+    : src/klbam.cpp src/klbam/count_bases.cpp boost_iostreams boost_program_options
+    ;
 
 #exe profile_vcfs
 #    : src/klbam/profile_vcfs.cpp boost_iostreams

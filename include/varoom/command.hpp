@@ -4,11 +4,14 @@
 #include <string>
 #include <map>
 #include <memory>
-#include <nlohmann/json.hpp>
+#include <boost/program_options.hpp>
 
 namespace varoom
 {
-    typedef nlohmann::json command_parameters;
+    typedef boost::program_options::options_description command_options;
+    typedef std::shared_ptr<command_options> command_options_ptr;
+    typedef boost::program_options::variables_map command_parameters;
+
 
     class command
     {
@@ -26,30 +29,54 @@ namespace varoom
 
         command_factory() = delete;
 
+        static bool has_command(const std::string& p_name)
+        {
+            auto itr = facs().find(p_name);
+            return (itr != facs().end());
+        }
+
+        static const command_options& options(const std::string& p_name)
+        {
+            auto itr = opts().find(p_name);
+            if (opts().find(p_name) == opts().end())
+            {
+                throw std::runtime_error("unknown factory name");
+            }
+            return *(itr->second);
+        }
+
         static command_ptr create(const std::string& p_name, const command_parameters& p_params)
         {
-            auto itr = known().find(p_name);
-            if (itr == known().end())
+            auto itr = facs().find(p_name);
+            if (itr == facs().end())
             {
                 throw std::domain_error("factory name not known");
             }
             return itr->second(p_params);
         }
 
-        static void add(const std::string& p_name, factory p_factory)
+        static bool add(const std::string& p_name, factory p_factory, command_options_ptr p_options_ptr)
         {
-            if (known().find(p_name) != known().end())
+            if (facs().find(p_name) != facs().end())
             {
                 // the name is taken!
-                return;
+                return false;
             }
-            known()[p_name] = p_factory;
+            facs()[p_name] = p_factory;
+            opts()[p_name] = p_options_ptr;
+            return true;
         }
 
     private:
-        static std::map<std::string,factory>& known()
+        static std::map<std::string,factory>& facs()
         {
             static std::map<std::string,factory> m;
+            return m;
+        }
+
+        static std::map<std::string,command_options_ptr>& opts()
+        {
+            static std::map<std::string,command_options_ptr> m;
             return m;
         }
     };
