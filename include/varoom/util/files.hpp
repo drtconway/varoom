@@ -159,7 +159,7 @@ namespace varoom
         static bool ends_with(const std::string& p_str, const std::string& p_suffix)
         {
             auto s = p_str.rbegin();
-            auto t = p_suffix.rend();
+            auto t = p_suffix.rbegin();
             while (s != p_str.rend() && t != p_suffix.rend())
             {
                 if (*s != *t)

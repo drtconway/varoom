@@ -41,10 +41,28 @@ namespace // anonymous
             for (sam_reader r(**inp); r.more(); ++r)
             {
                 const sam_alignment& aln = *r;
-                cerr << aln.chr
-                     << '\t' << aln.pos
-                     << '\t' << aln.seq
-                     << endl;
+                ph.add_alignment(aln.chr, aln.pos, aln.seq, aln.cigar, sam_flags::is_reverse(aln.flags));
+            }
+
+            output_file_holder_ptr outp = files::out(m_output_filename);
+            ostream& out = **outp;
+            for (auto i = ph.piles.begin(); i != ph.piles.end(); ++i)
+            {
+                const string& chr = i->first;
+                for (auto j = i->second.begin(); j != i->second.end(); ++j)
+                {
+                    const uint32_t& pos = j->first;
+                    for (auto k = j->second.begin(); k != j->second.end(); ++k)
+                    {
+                        const string& seq = k->first;
+                        const size_t& cnt = k->second;
+                        out << chr
+                            << '\t' << pos
+                            << '\t' << seq
+                            << '\t' << cnt
+                            << endl;
+                    }
+                }
             }
         }
 
