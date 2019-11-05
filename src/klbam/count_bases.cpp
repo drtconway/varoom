@@ -3,11 +3,27 @@
 #include "varoom/sam/pileup.hpp"
 #include "varoom/util/files.hpp"
 
+#include <initializer_list>
+
 using namespace std;
 using namespace varoom;
 
 namespace // anonymous
 {
+    string tabs(initializer_list<const char*> p_parts)
+    {
+        string s;
+        for (auto i = p_parts.begin(); i != p_parts.end(); ++i)
+        {
+            if (s.size() > 0)
+            {
+                s.push_back('\t');
+            }
+            s.insert(s.size(), *i);
+        }
+        return s;
+    }
+
     class pileup_holder : public varoom::sam_pileup
     {
     public:
@@ -17,7 +33,7 @@ namespace // anonymous
 
         chr_pos_base_counts piles;
 
-        virtual void output_pileup(const std::string& p_chr, const std::uint32_t& p_pos, const std::string& p_base, const size_t& p_count)
+        virtual void output_pileup(const string& p_chr, const uint32_t& p_pos, const string& p_base, const size_t& p_count)
         {
             piles[p_chr][p_pos][p_base] = p_count;
         }
@@ -46,6 +62,7 @@ namespace // anonymous
 
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
+            out << tabs({"chr", "pos", "seq", "count"}) << endl;
             for (auto i = ph.piles.begin(); i != ph.piles.end(); ++i)
             {
                 const string& chr = i->first;

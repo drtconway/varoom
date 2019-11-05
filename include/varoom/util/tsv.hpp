@@ -7,6 +7,9 @@
 
 #include <istream>
 #include <ostream>
+#include <unordered_map>
+#include <boost/algorithm/string.hpp>
+#include <nlohmann/json.hpp>
 
 namespace varoom
 {
@@ -82,11 +85,11 @@ namespace varoom
     class tsv_reader
     {
     public:
-        tsv_reader(std::istream& p_in)
+        tsv_reader(std::istream& p_in, bool p_header = true)
             : m_in(p_in), m_curr(m_hdr, m_parts), m_more(true)
         {
             next();
-            if (more())
+            if (p_header && more())
             {
                 make_header();
                 next();
@@ -144,7 +147,13 @@ namespace varoom
             st.split('\t', m_parts);
         }
 
+        static bool starts_with(const std::string& p_str, char p_ch)
+        {
+            return p_str.size() > 0 && p_str.front() == p_ch;
+        }
+
         std::istream& m_in;
+        std::string m_line;
         std::unordered_map<std::string,size_t> m_hdr;
         std::vector<subtext> m_parts;
         tsv_row m_curr;
@@ -174,7 +183,7 @@ namespace varoom
                     }
                     m_out << m_formatters[i](*itr);
                 }
-                m_out << endl;
+                m_out << std::endl;
             }
             else
             {
@@ -187,14 +196,16 @@ namespace varoom
                     }
                     m_out << (*itr);
                 }
-                m_out << endl;
+                m_out << std::endl;
             }
         }
 
         void end()
         {
         }
+
     private:
+        std::ostream& m_out;
         std::vector<tsv_formatter> m_formatters;
     };
 }

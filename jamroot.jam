@@ -10,7 +10,10 @@ lib boost_program_options : : <name>boost_program_options ;
 lib pthread : : <name>pthread ;
 
 exe klbam
-    : src/klbam.cpp src/klbam/count_bases.cpp boost_iostreams boost_program_options
+    : src/klbam.cpp
+      src/klbam/count_bases.cpp
+      src/klbam/merge_counts.cpp
+      boost_iostreams boost_program_options
     ;
 
 #exe profile_vcfs
