@@ -89,30 +89,66 @@ namespace // anonymous
         const string m_output_filename;
     };
 
-    command_ptr merge_counts_factory(const command_parameters& p_params)
+    class merge_counts_factory : public command_factory
     {
-        strings input_fns({"-"});
-        if (p_params.count("input"))
+    public:
+        merge_counts_factory() {}
+
+        virtual json parse(const command_options& p_global_opts, const command_parameters& p_globals,
+                           const std::vector<std::string>& p_args) const
         {
-            input_fns = p_params["input"].as<strings>();
+            namespace po = boost::program_options;
+
+            command_options opts("merge counts");
+            opts.add_options()
+                ("help,h", "produce help message")
+                ("inputs", po::value<strings>(), "input filename, defaults to '-' for stdin")
+                ("output,o", po::value<string>()->default_value("-"), "output filename, defaults to '-' for stdout")
+                ;
+
+            po::positional_options_description pos;
+            pos.add("input", -1);
+
+            po::variables_map vm;
+            po::parsed_options parsed
+                = po::command_line_parser(p_args).options(opts).positional(pos).run();
+            po::store(parsed, vm);
+            po::notify(vm);
+
+            json params;
+            if (p_globals.count("help") || vm.count("help"))
+            {
+                cout << p_global_opts << endl;
+                cout << opts << endl;
+                return params;
+            }
+
+            if (vm.count("inputs"))
+            {
+                params["inputs"] = vm["inputs"].as<strings>();
+            }
+            else
+            {
+                strings ss{"-"};
+                params["inputs"] = ss;
+            }
+            params["output"] = vm["output"].as<string>();
+
+            return params;
         }
-        string output_fn = p_params["output"].as<string>();
-        return command_ptr(new merge_counts_command(input_fns, output_fn));
-    }
 
-    command_options_ptr merge_counts_options()
-    {
-        namespace po = boost::program_options;
+        virtual command_ptr create(const json& p_params) const
+        {
+            if (!p_params.is_object())
+            {
+                return command_ptr();
+            }
+            strings input_fns = p_params["inputs"];
+            string output_fn = p_params["output"];
+            return command_ptr(new merge_counts_command(input_fns, output_fn));
+        }
+    };
 
-        command_options_ptr opts_ptr(new command_options("merge counts"));
-        (*opts_ptr).add_options()
-            ("help,h", "produce help message")
-            ("input,i", po::value<strings>(), "input filenames, defaults to '-' for stdin")
-            ("output,o", po::value<string>()->default_value("-"), "output filename, defaults to '-' for stdout")
-            ;
-        return opts_ptr;
-    }
-
-    bool reg = command_factory::add("merge", merge_counts_factory, merge_counts_options());
+    bool reg = command_factory::add("merge", command_factory_ptr(new merge_counts_factory));
 }
 // namespace anonymous

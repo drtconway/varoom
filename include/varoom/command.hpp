@@ -5,9 +5,11 @@
 #include <map>
 #include <memory>
 #include <boost/program_options.hpp>
+#include <nlohmann/json.hpp>
 
 namespace varoom
 {
+    typedef nlohmann::json json;
     typedef boost::program_options::options_description command_options;
     typedef std::shared_ptr<command_options> command_options_ptr;
     typedef boost::program_options::variables_map command_parameters;
@@ -22,12 +24,16 @@ namespace varoom
     };
     typedef std::shared_ptr<command> command_ptr;
 
+    class command_factory;
+    typedef std::shared_ptr<command_factory> command_factory_ptr;
+
     class command_factory
     {
     public:
-        using factory =  command_ptr(*)(const command_parameters& p_params);
+        virtual json parse(const command_options& p_global_opts, const command_parameters& p_globals,
+                           const std::vector<std::string>& p_args) const = 0;
 
-        command_factory() = delete;
+        virtual command_ptr create(const json& p_params) const = 0;
 
         static bool has_command(const std::string& p_name)
         {
@@ -35,27 +41,29 @@ namespace varoom
             return (itr != facs().end());
         }
 
-        static const command_options& options(const std::string& p_name)
-        {
-            auto itr = opts().find(p_name);
-            if (opts().find(p_name) == opts().end())
-            {
-                throw std::runtime_error("unknown factory name");
-            }
-            return *(itr->second);
-        }
-
-        static command_ptr create(const std::string& p_name, const command_parameters& p_params)
+        static json parse(const std::string& p_name,
+                          const command_options& p_global_opts, const command_parameters& p_globals,
+                          const std::vector<std::string>& p_args)
         {
             auto itr = facs().find(p_name);
             if (itr == facs().end())
             {
                 throw std::domain_error("factory name not known");
             }
-            return itr->second(p_params);
+            return itr->second->parse(p_global_opts, p_globals, p_args);
         }
 
-        static bool add(const std::string& p_name, factory p_factory, command_options_ptr p_options_ptr)
+        static command_ptr create(const std::string& p_name, const json& p_params)
+        {
+            auto itr = facs().find(p_name);
+            if (itr == facs().end())
+            {
+                throw std::domain_error("factory name not known");
+            }
+            return itr->second->create(p_params);
+        }
+
+        static bool add(const std::string& p_name, command_factory_ptr p_factory)
         {
             if (facs().find(p_name) != facs().end())
             {
@@ -63,20 +71,16 @@ namespace varoom
                 return false;
             }
             facs()[p_name] = p_factory;
-            opts()[p_name] = p_options_ptr;
             return true;
         }
 
-    private:
-        static std::map<std::string,factory>& facs()
-        {
-            static std::map<std::string,factory> m;
-            return m;
-        }
+    protected:
+        command_factory() {}
 
-        static std::map<std::string,command_options_ptr>& opts()
+    private:
+        static std::map<std::string,command_factory_ptr>& facs()
         {
-            static std::map<std::string,command_options_ptr> m;
+            static std::map<std::string,command_factory_ptr> m;
             return m;
         }
     };

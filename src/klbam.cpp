@@ -36,34 +36,34 @@ int main(int argc, const char** argv)
     po::store(parsed, vm);
     po::notify(vm);
 
+    if (vm.count("command"))
+    {
+        std::string cmd_name = vm["command"].as<std::string>();
+
+        if (!command_factory::has_command(cmd_name))
+        {
+            cerr << global << endl << endl;
+            cerr << "unknown command '" << cmd_name << "'." << endl;
+            cerr << "to see a list of commands use: klbam --help" << endl;
+            return 1;
+        }
+
+        vector<string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+        opts.erase(opts.begin());
+
+        json args = command_factory::parse(cmd_name, global, vm, opts);
+        command_ptr cmdp = command_factory::create(cmd_name, args);
+        if (cmdp)
+        {
+            (*cmdp)();
+        }
+    }
+
     if (vm.count("help"))
     {
         cout << global << endl;
         return 0;
     }
 
-    if (!vm.count("command"))
-    {
-        cout << global << endl;
-        return 1;
-    }
-    std::string cmd_name = vm["command"].as<std::string>();
-
-    if (!command_factory::has_command(cmd_name))
-    {
-        cerr << "unknown command '" << cmd_name << "'." << endl;
-        cerr << "to see a list of commands use: klbam --help" << endl;
-        return 1;
-    }
-
-    vector<string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
-    opts.erase(opts.begin());
-
-    const command_options& cmd_opts = command_factory::options(cmd_name);
-    po::store(po::command_line_parser(opts).options(cmd_opts).run(), vm);
-    po::notify(vm);
-
-    command_ptr cmdp = command_factory::create(cmd_name, vm);
-    (*cmdp)();
     return 0;
 }

@@ -88,28 +88,64 @@ namespace // anonymous
         const string m_output_filename;
     };
 
-    command_ptr count_bases_factory(const command_parameters& p_params)
+    class count_bases_factory : public command_factory
     {
-        string input_fn = p_params["input"].as<string>();
-        string output_fn = p_params["output"].as<string>();
-        return command_ptr(new count_bases_command(input_fn, output_fn));
-    }
+    public:
+        count_bases_factory() {}
 
-    command_options_ptr count_bases_options()
-    {
-        namespace po = boost::program_options;
+        virtual json parse(const command_options& p_global_opts, const command_parameters& p_globals,
+                           const std::vector<std::string>& p_args) const
+        {
+            namespace po = boost::program_options;
 
-        command_options_ptr opts_ptr(new command_options("count bases"));
-        (*opts_ptr).add_options()
-            ("help,h", "produce help message")
-            ("regions,r", po::value<string>(), "only include counts from regions in the named BED file")
-            ("input,i", po::value<string>()->default_value("-"), "input filename, defaults to '-' for stdin")
-            ("output,o", po::value<string>()->default_value("-"), "output filename, defaults to '-' for stdout")
-            ;
-        return opts_ptr;
-    }
+            command_options opts("count bases");
+            opts.add_options()
+                ("help,h", "produce help message")
+                ("regions,r", po::value<string>(), "only include counts from regions in the named BED file")
+                ("input,i", po::value<string>()->default_value("-"), "input filename, defaults to '-' for stdin")
+                ("output,o", po::value<string>()->default_value("-"), "output filename, defaults to '-' for stdout")
+                ;
 
-    bool reg = command_factory::add("count", count_bases_factory, count_bases_options());
+            po::positional_options_description pos;
+            pos.add("input", -1);
+
+            po::variables_map vm;
+            po::parsed_options parsed
+                = po::command_line_parser(p_args).options(opts).positional(pos).run();
+            po::store(parsed, vm);
+            po::notify(vm);
+
+            json params;
+            if (p_globals.count("help") || vm.count("help"))
+            {
+                cout << p_global_opts << endl;
+                cout << opts << endl;
+                return params;
+            }
+
+            params["input"] = vm["input"].as<string>();
+            params["output"] = vm["output"].as<string>();
+            if (vm.count("regions"))
+            {
+                params["regions"] = vm["regions"].as<string>();
+            }
+
+            return params;
+        }
+
+        virtual command_ptr create(const json& p_params) const
+        {
+            if (!p_params.is_object())
+            {
+                return command_ptr();
+            }
+            string input_fn = p_params["input"];
+            string output_fn = p_params["output"];
+            return command_ptr(new count_bases_command(input_fn, output_fn));
+        }
+    };
+    
+    bool reg = command_factory::add("count", command_factory_ptr(new count_bases_factory));
 }
 // namespace anonymous
 
