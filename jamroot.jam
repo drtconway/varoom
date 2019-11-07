@@ -13,6 +13,7 @@ exe klbam
     : src/klbam.cpp
       src/klbam/count_bases.cpp
       src/klbam/merge_counts.cpp
+      src/klbam/sample_dist.cpp
       boost_iostreams boost_program_options
     ;
 
