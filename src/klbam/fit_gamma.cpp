@@ -30,10 +30,10 @@ namespace // anonymous
     typedef map<uint32_t,base_counts> pos_base_counts;
     typedef map<string,pos_base_counts> chr_pos_base_counts;
 
-    class merge_counts_command : public varoom::command
+    class fit_gamma_command : public varoom::command
     {
     public:
-        merge_counts_command(const strings& p_input_filenames,
+        fit_gamma_command(const strings& p_input_filenames,
                             const string& p_output_filename)
             : m_input_filenames(p_input_filenames),
               m_output_filename(p_output_filename)
@@ -45,9 +45,8 @@ namespace // anonymous
             chr_pos_base_counts counts;
             string chr;
             uint32_t pos;
-            std::vector<subtext> other_parts;
-            std::vector<subtext> other_key_val;
             string seq;
+            size_t cnt;
             for (size_t n = 0; n < m_input_filenames.size(); ++n)
             {
                 input_file_holder_ptr inp = files::in(m_input_filenames[n]);
@@ -56,30 +55,15 @@ namespace // anonymous
                     const tsv_row& r = *t;
                     chr = r[0];
                     pos = lexical_cast<uint32_t>(make_iterator_range(r[1].first, r[1].second));
-                    counts[chr][pos]["A"] += lexical_cast<size_t>(make_iterator_range(r[2].first, r[2].second));
-                    counts[chr][pos]["C"] += lexical_cast<size_t>(make_iterator_range(r[3].first, r[3].second));
-                    counts[chr][pos]["G"] += lexical_cast<size_t>(make_iterator_range(r[4].first, r[4].second));
-                    counts[chr][pos]["T"] += lexical_cast<size_t>(make_iterator_range(r[5].first, r[5].second));
-
-                    if (r[6] == ".")
-                    {
-                        // No indels
-                        continue;
-                    }
-                    r[6].split(';', other_parts);
-                    for (size_t i = 0; i < other_parts.size(); ++i)
-                    {
-                        other_parts[i].split('=', other_key_val);
-                        seq = other_key_val[0];
-                        size_t cnt = lexical_cast<size_t>(make_iterator_range(other_key_val[1].first, other_key_val[1].second));
-                        counts[chr][pos][seq] += cnt;
-                    }
+                    seq = r[2];
+                    cnt = lexical_cast<uint32_t>(make_iterator_range(r[3].first, r[3].second));
+                    counts[chr][pos][seq] += cnt;
                 }
             }
 
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
-            out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
+            out << tabs({"chr", "pos", "seq", "count"}) << endl;
             for (auto i = counts.begin(); i != counts.end(); ++i)
             {
                 const string& chr = i->first;
@@ -105,10 +89,10 @@ namespace // anonymous
         const string m_output_filename;
     };
 
-    class merge_counts_factory : public command_factory
+    class fit_gamma_factory : public command_factory
     {
     public:
-        merge_counts_factory() {}
+        fit_gamma_factory() {}
 
         virtual json parse(const command_options& p_global_opts, const command_parameters& p_globals,
                            const std::vector<std::string>& p_args) const
@@ -161,10 +145,10 @@ namespace // anonymous
             }
             strings input_fns = p_params["inputs"];
             string output_fn = p_params["output"];
-            return command_ptr(new merge_counts_command(input_fns, output_fn));
+            return command_ptr(new fit_gamma_command(input_fns, output_fn));
         }
     };
 
-    bool reg = command_factory::add("merge", command_factory_ptr(new merge_counts_factory));
+    bool reg = command_factory::add("fit", command_factory_ptr(new fit_gamma_factory));
 }
 // namespace anonymous

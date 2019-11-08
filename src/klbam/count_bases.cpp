@@ -27,15 +27,98 @@ namespace // anonymous
     class pileup_holder : public varoom::sam_pileup
     {
     public:
-        typedef map<string,size_t> base_counts;
-        typedef map<uint32_t,base_counts> pos_base_counts;
-        typedef map<string,pos_base_counts> chr_pos_base_counts;
+        pileup_holder(ostream& p_out)
+            : chr("<unknown>"), pos(0), out(p_out)
+        {
+        }
 
-        chr_pos_base_counts piles;
+        string chr;
+        uint32_t pos;
+        ostream& out;
+        map<string,size_t> counts;
 
         virtual void output_pileup(const string& p_chr, const uint32_t& p_pos, const string& p_base, const size_t& p_count)
         {
-            piles[p_chr][p_pos][p_base] = p_count;
+            if (p_chr == chr && p_pos == pos)
+            {
+                counts[p_base] = p_count;
+                return;
+            }
+
+            if (pos == 0)
+            {
+                chr = p_chr;
+                pos = p_pos;
+                counts.clear();
+                counts[p_base] = p_count;
+                return;
+            }
+
+            size_t nA = 0;
+            size_t nC = 0;
+            size_t nG = 0;
+            size_t nT = 0;
+            std::vector<std::pair<std::string,size_t>> nOther;
+            for (auto k = counts.begin(); k != counts.end(); ++k)
+            {
+                const string& seq = k->first;
+                const size_t& cnt = k->second;
+                if (seq == "A")
+                {
+                    nA = cnt;
+                    continue;
+                }
+                if (seq == "C")
+                {
+                    nC = cnt;
+                    continue;
+                }
+                if (seq == "G")
+                {
+                    nG = cnt;
+                    continue;
+                }
+                if (seq == "T")
+                {
+                    nT = cnt;
+                    continue;
+                }
+                nOther.push_back(std::pair<std::string,size_t>(seq, cnt));
+            }
+
+            std::string other;
+            if (nOther.size() == 0)
+            {
+                other = ".";
+            }
+            else
+            {
+                for (size_t k = 0; k < nOther.size(); ++k)
+                {
+                    const std::string& seq = nOther[k].first;
+                    std::string cnt = boost::lexical_cast<std::string>(nOther[k].second);
+                    if (k > 0)
+                    {
+                        other.push_back(';');
+                    }
+                    other.insert(other.end(), seq.begin(), seq.end());
+                    other.push_back('=');
+                    other.insert(other.end(), cnt.begin(), cnt.end());
+                }
+            }
+            out << chr
+                << '\t' << pos
+                << '\t' << nA
+                << '\t' << nC
+                << '\t' << nG
+                << '\t' << nT
+                << '\t' << other
+                << endl;
+
+            chr = p_chr;
+            pos = p_pos;
+            counts.clear();
+            counts[p_base] = p_count;
         }
     };
 
@@ -51,35 +134,16 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            pileup_holder ph;
+            output_file_holder_ptr outp = files::out(m_output_filename);
+            ostream& out = **outp;
+            out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
 
+            pileup_holder ph(out);
             input_file_holder_ptr inp = files::in(m_input_filename);
             for (sam_reader r(**inp); r.more(); ++r)
             {
                 const sam_alignment& aln = *r;
                 ph.add_alignment(aln.chr, aln.pos, aln.seq, aln.cigar, sam_flags::is_reverse(aln.flags));
-            }
-
-            output_file_holder_ptr outp = files::out(m_output_filename);
-            ostream& out = **outp;
-            out << tabs({"chr", "pos", "seq", "count"}) << endl;
-            for (auto i = ph.piles.begin(); i != ph.piles.end(); ++i)
-            {
-                const string& chr = i->first;
-                for (auto j = i->second.begin(); j != i->second.end(); ++j)
-                {
-                    const uint32_t& pos = j->first;
-                    for (auto k = j->second.begin(); k != j->second.end(); ++k)
-                    {
-                        const string& seq = k->first;
-                        const size_t& cnt = k->second;
-                        out << chr
-                            << '\t' << pos
-                            << '\t' << seq
-                            << '\t' << cnt
-                            << endl;
-                    }
-                }
             }
         }
 

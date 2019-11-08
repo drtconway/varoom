@@ -24,38 +24,7 @@ namespace // anonymous
         return s;
     }
 
-    struct counts_row
-    {
-        std::string chr;
-        uint32_t    pos;
-        std::string ref;
-        size_t      nA;
-        size_t      nC;
-        size_t      nG;
-        size_t      nT;
-
-        void fill(const tsv_row& p_row)
-        {
-            chr = p_row.get<std::string>(0);
-            pos = p_row.get<uint32_t>(1);
-            ref = p_row.get<std::string>(2);
-            nA = p_row.get<size_t>(3);
-            nC = p_row.get<size_t>(4);
-            nG = p_row.get<size_t>(5);
-            nT = p_row.get<size_t>(6);
-        }
-
-        bool before(const counts_row& p_other) const
-        {
-            if (chr == p_other.chr)
-            {
-                return pos < p_other.pos;
-            }
-            return chr < p_other.chr;
-        }
-    };
-
-    double kl_distance(const std::vector<double>& P, const std::vector<double>& Q)
+    double kl_divergence(const std::vector<double>& P, const std::vector<double>& Q)
     {
         // assert P.size() == Q.size()
         // assert sum(P) == 1.0
@@ -96,47 +65,8 @@ namespace // anonymous
 
             tsv_reader glob(**globp);
             tsv_reader sample(**inp);
-            counts_row g;
-            counts_row s;
-            while (glob.more() && sample.more())
-            {
-                g.fill(*glob);
-                s.fill(*sample);
-                if (g.before(s))
-                {
-                    ++glob;
-                    continue;
-                }
-                if (s.before(g))
-                {
-                    throw std::runtime_error("sample contained position not in global counts");
-                }
-                const double gTot = g.nA + g.nC + g.nG + g.nT;
-                if (gTot == 0)
-                {
-                    // XXX probably should warn, or something.
-                    continue;
-                }
-                const vector<double> pg{g.nA / gTot, g.nC / gTot, g.nG / gTot, g.nT / gTot};
-                const double sTot = s.nA + s.nC + s.nG + s.nT;
-                if (sTot == 0)
-                {
-                    // XXX probably should warn, or something.
-                    continue;
-                }
-                const vector<double> ps{s.nA / sTot, s.nC / sTot, s.nG / sTot, s.nT / sTot};
-
-                double kld = kl_distance(ps, pg);
-                out << s.chr 
-                    << '\t' << s.pos
-                    << '\t' << s.ref
-                    << '\t' << s.nA
-                    << '\t' << s.nC
-                    << '\t' << s.nG
-                    << '\t' << s.nT
-                    << '\t' << kld
-                    << std::endl;
-            }
+            std::vector<double> gProbs;
+            std::vector<double> sProbs;
         }
 
     private:
