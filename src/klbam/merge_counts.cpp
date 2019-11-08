@@ -1,6 +1,7 @@
 #include "varoom/command.hpp"
 #include "varoom/util/files.hpp"
 #include "varoom/util/tsv.hpp"
+#include "varoom/util/typed_tsv.hpp"
 
 #include <boost/lexical_cast.hpp>
 
@@ -26,9 +27,92 @@ namespace // anonymous
         return s;
     }
 
-    typedef map<string,size_t> base_counts;
-    typedef map<uint32_t,base_counts> pos_base_counts;
-    typedef map<string,pos_base_counts> chr_pos_base_counts;
+    typedef pair<string,uint32_t> locus;
+    typedef pair<string,size_t> seq_and_count;
+    typedef vector<seq_and_count> seq_and_count_list;
+
+    struct counts
+    {
+        size_t nA;
+        size_t nC;
+        size_t nG;
+        size_t nT;
+        map<string,size_t> indels;
+
+        counts()
+            : nA(0), nC(0), nG(0), nT(0)
+        { }
+
+        counts(size_t p_nA, size_t p_nC, size_t p_nG, size_t p_nT, const seq_and_count_list& p_indels)
+            : nA(p_nA), nC(p_nC), nG(p_nG), nT(p_nT)
+        {
+            for (auto itr = p_indels.begin(); itr != p_indels.end(); ++itr)
+            {
+                indels[itr->first] = itr->second;
+            }
+        }
+
+        counts(const subtext& p_nA, const subtext& p_nC, const subtext& p_nG, const subtext& p_nT,
+               const subtext& p_other)
+            : nA(lexical_cast<size_t>(make_iterator_range(p_nA.first, p_nA.second))),
+              nC(lexical_cast<size_t>(make_iterator_range(p_nC.first, p_nC.second))),
+              nG(lexical_cast<size_t>(make_iterator_range(p_nG.first, p_nG.second))),
+              nT(lexical_cast<size_t>(make_iterator_range(p_nT.first, p_nT.second)))
+        {
+            if (p_other == ".")
+            {
+                return;
+            }
+            vector<subtext> indel_parts;
+            vector<subtext> kv;
+            p_other.split(';', indel_parts);
+            for (size_t i = 0; i < indel_parts.size(); ++i)
+            {
+                indel_parts[i].split('=', kv);
+                string seq = kv[0];
+                size_t cnt = lexical_cast<size_t>(make_iterator_range(kv[1].first, kv[1].second));
+                indels[seq] = cnt;
+            }
+        }
+
+        counts& operator+=(const counts& p_other)
+        {
+            nA += p_other.nA;
+            nC += p_other.nC;
+            nG += p_other.nG;
+            nT += p_other.nT;
+            for (auto itr = p_other.indels.begin(); itr != p_other.indels.end(); ++itr)
+            {
+                indels[itr->first] += itr->second;
+            }
+            return *this;
+        }
+
+        string stringify_indels() const
+        {
+            if (indels.size() == 0)
+            {
+                return ".";
+            }
+            else
+            {
+                std::string res;
+                for (auto itr = indels.begin(); itr != indels.end(); ++itr)
+                {
+                    const std::string& seq = itr->first;
+                    std::string cnt = boost::lexical_cast<std::string>(itr->second);
+                    if (itr != indels.begin())
+                    {
+                        res.push_back(';');
+                    }
+                    res.insert(res.end(), seq.begin(), seq.end());
+                    res.push_back('=');
+                    res.insert(res.end(), cnt.begin(), cnt.end());
+                }
+                return res;
+            }
+        }
+    };
 
     class merge_counts_command : public varoom::command
     {
@@ -42,61 +126,45 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            chr_pos_base_counts counts;
+            map<locus,counts> res;
+
             string chr;
             uint32_t pos;
             std::vector<subtext> other_parts;
             std::vector<subtext> other_key_val;
             string seq;
+
+            vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str->uint]"};
+
             for (size_t n = 0; n < m_input_filenames.size(); ++n)
             {
                 input_file_holder_ptr inp = files::in(m_input_filenames[n]);
-                for (auto t = tsv_reader(**inp); t.more(); ++t)
+                for (auto t = typed_tsv_reader(**inp, types); t.more(); ++t)
                 {
-                    const tsv_row& r = *t;
-                    chr = r[0];
-                    pos = lexical_cast<uint32_t>(make_iterator_range(r[1].first, r[1].second));
-                    counts[chr][pos]["A"] += lexical_cast<size_t>(make_iterator_range(r[2].first, r[2].second));
-                    counts[chr][pos]["C"] += lexical_cast<size_t>(make_iterator_range(r[3].first, r[3].second));
-                    counts[chr][pos]["G"] += lexical_cast<size_t>(make_iterator_range(r[4].first, r[4].second));
-                    counts[chr][pos]["T"] += lexical_cast<size_t>(make_iterator_range(r[5].first, r[5].second));
-
-                    if (r[6] == ".")
-                    {
-                        // No indels
-                        continue;
-                    }
-                    r[6].split(';', other_parts);
-                    for (size_t i = 0; i < other_parts.size(); ++i)
-                    {
-                        other_parts[i].split('=', other_key_val);
-                        seq = other_key_val[0];
-                        size_t cnt = lexical_cast<size_t>(make_iterator_range(other_key_val[1].first, other_key_val[1].second));
-                        counts[chr][pos][seq] += cnt;
-                    }
+                    const typed_tsv_row& r = *t;
+                    chr = any_cast<string>(r[0]);
+                    pos = any_cast<uint64_t>(r[1]);
+                    locus loc(chr, pos);
+                    res[loc] += counts(any_cast<uint64_t>(r[2]), any_cast<uint64_t>(r[3]),
+                                       any_cast<uint64_t>(r[4]), any_cast<uint64_t>(r[5]),
+                                       any_cast<const seq_and_count_list&>(r[6]));
                 }
             }
 
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
             out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
-            for (auto i = counts.begin(); i != counts.end(); ++i)
+            for (auto i = res.begin(); i != res.end(); ++i)
             {
-                const string& chr = i->first;
-                for (auto j = i->second.begin(); j != i->second.end(); ++j)
-                {
-                    const uint32_t& pos = j->first;
-                    for (auto k = j->second.begin(); k != j->second.end(); ++k)
-                    {
-                        const string& seq = k->first;
-                        const size_t& cnt = k->second;
-                        out << chr
-                            << '\t' << pos
-                            << '\t' << seq
-                            << '\t' << cnt
-                            << endl;
-                    }
-                }
+                const string& chr = i->first.first;
+                const uint32_t& pos = i->first.second;
+                out << chr << '\t' << pos
+                    << '\t' << i->second.nA
+                    << '\t' << i->second.nC
+                    << '\t' << i->second.nG
+                    << '\t' << i->second.nT
+                    << '\t' << i->second.stringify_indels()
+                    << endl;
             }
         }
 
@@ -123,7 +191,7 @@ namespace // anonymous
                 ;
 
             po::positional_options_description pos;
-            pos.add("input", -1);
+            pos.add("inputs", -1);
 
             po::variables_map vm;
             po::parsed_options parsed

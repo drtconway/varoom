@@ -61,7 +61,7 @@ namespace // anonymous
             input_file_holder_ptr inp = files::in(m_input_filename);
             output_file_holder_ptr outp = files::out(m_output_filename);
             std::ostream& out = **outp;
-            out << tabs({"chr", "pos", "ref", "nA", "nC", "nG", "nT", "kld"}) << std::endl;
+            out << tabs({"chr", "pos", "ref", "nA", "nC", "nG", "nT", "indel", "kld"}) << std::endl;
 
             tsv_reader glob(**globp);
             tsv_reader sample(**inp);

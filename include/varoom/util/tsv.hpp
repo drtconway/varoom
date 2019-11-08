@@ -142,7 +142,6 @@ namespace varoom
                 break;
             }
 
-            boost::algorithm::trim(m_line);
             subtext st(m_line);
             st.split('\t', m_parts);
         }
