@@ -2,6 +2,7 @@
 #include "varoom/sam.hpp"
 #include "varoom/sam/pileup.hpp"
 #include "varoom/util/files.hpp"
+#include "varoom/util/typed_tsv.hpp"
 
 #include <initializer_list>
 
@@ -24,18 +25,23 @@ namespace // anonymous
         return s;
     }
 
+    typedef pair<string,size_t> seq_and_count;
+    typedef vector<seq_and_count> seq_and_count_list;
+
     class pileup_holder : public varoom::sam_pileup
     {
     public:
         pileup_holder(ostream& p_out)
-            : chr("<unknown>"), pos(0), out(p_out)
+            : chr("<unknown>"), pos(0), out(p_out), ind(*tsv_column_type::get("[str=uint]"))
         {
         }
 
         string chr;
         uint32_t pos;
         ostream& out;
+        const tsv_column_type& ind;
         map<string,size_t> counts;
+        string other;
 
         virtual void output_pileup(const string& p_chr, const uint32_t& p_pos, const string& p_base, const size_t& p_count)
         {
@@ -58,7 +64,7 @@ namespace // anonymous
             size_t nC = 0;
             size_t nG = 0;
             size_t nT = 0;
-            std::vector<std::pair<std::string,size_t>> nOther;
+            seq_and_count_list nOther;
             for (auto k = counts.begin(); k != counts.end(); ++k)
             {
                 const string& seq = k->first;
@@ -83,29 +89,11 @@ namespace // anonymous
                     nT = cnt;
                     continue;
                 }
-                nOther.push_back(std::pair<std::string,size_t>(seq, cnt));
+                nOther.push_back(pair<string,size_t>(seq, cnt));
             }
 
-            std::string other;
-            if (nOther.size() == 0)
-            {
-                other = ".";
-            }
-            else
-            {
-                for (size_t k = 0; k < nOther.size(); ++k)
-                {
-                    const std::string& seq = nOther[k].first;
-                    std::string cnt = boost::lexical_cast<std::string>(nOther[k].second);
-                    if (k > 0)
-                    {
-                        other.push_back(';');
-                    }
-                    other.insert(other.end(), seq.begin(), seq.end());
-                    other.push_back('=');
-                    other.insert(other.end(), cnt.begin(), cnt.end());
-                }
-            }
+            ind.unmake(tsv_column_value(nOther), other);
+
             out << chr
                 << '\t' << pos
                 << '\t' << nA

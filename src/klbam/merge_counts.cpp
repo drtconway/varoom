@@ -52,29 +52,6 @@ namespace // anonymous
             }
         }
 
-        counts(const subtext& p_nA, const subtext& p_nC, const subtext& p_nG, const subtext& p_nT,
-               const subtext& p_other)
-            : nA(lexical_cast<size_t>(make_iterator_range(p_nA.first, p_nA.second))),
-              nC(lexical_cast<size_t>(make_iterator_range(p_nC.first, p_nC.second))),
-              nG(lexical_cast<size_t>(make_iterator_range(p_nG.first, p_nG.second))),
-              nT(lexical_cast<size_t>(make_iterator_range(p_nT.first, p_nT.second)))
-        {
-            if (p_other == ".")
-            {
-                return;
-            }
-            vector<subtext> indel_parts;
-            vector<subtext> kv;
-            p_other.split(';', indel_parts);
-            for (size_t i = 0; i < indel_parts.size(); ++i)
-            {
-                indel_parts[i].split('=', kv);
-                string seq = kv[0];
-                size_t cnt = lexical_cast<size_t>(make_iterator_range(kv[1].first, kv[1].second));
-                indels[seq] = cnt;
-            }
-        }
-
         counts& operator+=(const counts& p_other)
         {
             nA += p_other.nA;
@@ -86,31 +63,6 @@ namespace // anonymous
                 indels[itr->first] += itr->second;
             }
             return *this;
-        }
-
-        string stringify_indels() const
-        {
-            if (indels.size() == 0)
-            {
-                return ".";
-            }
-            else
-            {
-                std::string res;
-                for (auto itr = indels.begin(); itr != indels.end(); ++itr)
-                {
-                    const std::string& seq = itr->first;
-                    std::string cnt = boost::lexical_cast<std::string>(itr->second);
-                    if (itr != indels.begin())
-                    {
-                        res.push_back(';');
-                    }
-                    res.insert(res.end(), seq.begin(), seq.end());
-                    res.push_back('=');
-                    res.insert(res.end(), cnt.begin(), cnt.end());
-                }
-                return res;
-            }
         }
     };
 
@@ -128,13 +80,7 @@ namespace // anonymous
         {
             map<locus,counts> res;
 
-            string chr;
-            uint32_t pos;
-            std::vector<subtext> other_parts;
-            std::vector<subtext> other_key_val;
-            string seq;
-
-            vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str->uint]"};
+            vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]"};
 
             for (size_t n = 0; n < m_input_filenames.size(); ++n)
             {
@@ -142,28 +88,39 @@ namespace // anonymous
                 for (auto t = typed_tsv_reader(**inp, types); t.more(); ++t)
                 {
                     const typed_tsv_row& r = *t;
-                    chr = any_cast<string>(r[0]);
-                    pos = any_cast<uint64_t>(r[1]);
-                    locus loc(chr, pos);
+                    locus loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
                     res[loc] += counts(any_cast<uint64_t>(r[2]), any_cast<uint64_t>(r[3]),
                                        any_cast<uint64_t>(r[4]), any_cast<uint64_t>(r[5]),
                                        any_cast<const seq_and_count_list&>(r[6]));
                 }
             }
 
+            vector<string> type_names{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]"};
+
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
-            out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
+            out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indels"}) << endl;
+            const tsv_column_type& ind = *tsv_column_type::get("[str=uint]");
+            seq_and_count_list scl;
+            string scl_str;
             for (auto i = res.begin(); i != res.end(); ++i)
             {
                 const string& chr = i->first.first;
                 const uint32_t& pos = i->first.second;
+
+                scl.clear();
+                for (auto j = i->second.indels.begin(); j != i->second.indels.end(); ++j)
+                {
+                    scl.push_back(*j);
+                }
+                ind.unmake(tsv_column_value(scl), scl_str);
+
                 out << chr << '\t' << pos
                     << '\t' << i->second.nA
                     << '\t' << i->second.nC
                     << '\t' << i->second.nG
                     << '\t' << i->second.nT
-                    << '\t' << i->second.stringify_indels()
+                    << '\t' << scl_str
                     << endl;
             }
         }

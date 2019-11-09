@@ -135,7 +135,8 @@ namespace varoom
                 p_str = boost::lexical_cast<std::string>(x);
             }
         };
-        bool default_tsv_column_atomic_types[] = {
+
+        static bool default_tsv_column_atomic_types[] = {
             tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_atom<int64_t>("int"))),
             tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_atom<uint64_t>("uint"))),
             tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_atom<double>("flt"))),
@@ -192,11 +193,11 @@ namespace varoom
             const char m_sep;
         };
 
-        bool default_tsv_column_key_value_types[] = {
-            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_key_value<int64_t>("str->int", "int"))),
-            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_key_value<uint64_t>("str->uint", "uint"))),
-            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_key_value<double>("str->flt", "flt"))),
-            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_key_value<std::string>("str->str", "str")))
+        static bool default_tsv_column_key_value_types[] = {
+            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_key_value<int64_t>("str=int", "int"))),
+            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_key_value<uint64_t>("str=uint", "uint"))),
+            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_key_value<double>("str=flt", "flt"))),
+            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_key_value<std::string>("str=str", "str")))
         };
 
         template <typename T>
@@ -252,15 +253,15 @@ namespace varoom
             const char m_sep;
         };
         
-        bool default_tsv_column_list_types[] = {
+        static bool default_tsv_column_list_types[] = {
             tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<int64_t>("[int]", "int", ';'))),
             tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<uint64_t>("[uint]", "uint", ';'))),
             tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<double>("[flt]", "flt", ';'))),
             tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<std::string>("[str]", "str", ';'))),
-            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<std::pair<std::string,int64_t>>("[str->int]", "str->int", ';'))),
-            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<std::pair<std::string,uint64_t>>("[str->uint]", "str->uint", ';'))),
-            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<std::pair<std::string,double>>("[str->flt]", "str->flt", ';'))),
-            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<std::pair<std::string,std::string>>("[str->str]", "str->str", ';'))),
+            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<std::pair<std::string,int64_t>>("[str=int]", "str=int", ';'))),
+            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<std::pair<std::string,uint64_t>>("[str=uint]", "str=uint", ';'))),
+            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<std::pair<std::string,double>>("[str=flt]", "str=flt", ';'))),
+            tsv_column_type::add(tsv_column_type_ptr(new tsv_column_type_list<std::pair<std::string,std::string>>("[str=str]", "str=str", ';'))),
         };
     }
     // namespace detail
