@@ -21,23 +21,16 @@ def factorial(n):
     return facCache[n]
 
 def pois(lam):
-    c = 0.767 - 3.36/lam
-    beta = math.pi/math.sqrt(3.0*lam)
-    alpha = beta*lam
-    k = math.log(c) - lam - math.log(beta)
-
+    l = math.exp(-lam)
+    k = 0
+    p = 1.0
     while True:
+        k += 1
         u = random.random()
-        x = (alpha - math.log((1.0 - u)/u))/beta
-        n = int(math.floor(x + 0.5))
-        if n < 0:
-            continue
-        v = random.random()
-        y = alpha - beta*x
-        lhs = y + math.log(v/(1.0 + sqr(math.exp(y))))
-        rhs = k + n*math.log(lam) - math.log(factorial(n))
-        if lhs <= rhs:
-            return n
+        p *= u
+        if p <= l:
+            break
+    return k - 1
 
 def readFasta(f):
     nm = None
@@ -73,7 +66,7 @@ def mkProbs(E, N, r):
     if u < N:
         s = random.choice(alts[r])
     pr = {}
-    if random.random() < 0.5:
+    if s != r and random.random() < 0.5:
         v = 1.0 - E
         pr[r] = v/2.0
         pr[s] = v/2.0
@@ -118,6 +111,7 @@ G = sys.argv[6]
 lastCh = None
 lastSeq = None
 
+print '\t'.join(['chr', 'pos', 'nA', 'nC', 'nG', 'nT', 'indels'])
 random.seed(S)
 for itm in bed:
     (ch, st, en) = itm
@@ -129,6 +123,8 @@ for itm in bed:
     for pos in range(st+1, en+1):
         r = lastSeq[pos].upper()
         pr = mkProbs(E, N, r)
+        row = [ch, str(pos)]
         for (b,c) in sorted(mkCov(C, pr).items()):
-            if c > 0:
-                print '%s\t%d\t%s\t%d' % (ch, pos, b, c)
+            row.append(str(c))
+        row.append('') # indels
+        print '\t'.join(row)

@@ -14,6 +14,8 @@ exe klbam
       src/klbam/count_bases.cpp
       src/klbam/merge_counts.cpp
       src/klbam/sample_dist.cpp
+      src/klbam/fit_gamma.cpp
+      src/klbam/sample_pval.cpp
       boost_iostreams boost_program_options
     ;
 

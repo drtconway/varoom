@@ -1,7 +1,8 @@
 #include "varoom/command.hpp"
 #include "varoom/util/files.hpp"
-#include "varoom/util/tsv.hpp"
+#include "varoom/util/typed_tsv.hpp"
 
+#include <cmath>
 #include <boost/lexical_cast.hpp>
 
 using namespace std;
@@ -26,9 +27,7 @@ namespace // anonymous
         return s;
     }
 
-    typedef map<string,size_t> base_counts;
-    typedef map<uint32_t,base_counts> pos_base_counts;
-    typedef map<string,pos_base_counts> chr_pos_base_counts;
+    typedef pair<string,uint32_t> locus;
 
     class fit_gamma_command : public varoom::command
     {
@@ -42,45 +41,47 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            chr_pos_base_counts counts;
-            string chr;
-            uint32_t pos;
-            string seq;
-            size_t cnt;
+            vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]", "flt"};
+
+            map<locus,vector<double>> klds;
             for (size_t n = 0; n < m_input_filenames.size(); ++n)
             {
                 input_file_holder_ptr inp = files::in(m_input_filenames[n]);
-                for (auto t = tsv_reader(**inp); t.more(); ++t)
+                for (auto t = typed_tsv_reader(**inp, types); t.more(); ++t)
                 {
-                    const tsv_row& r = *t;
-                    chr = r[0];
-                    pos = lexical_cast<uint32_t>(make_iterator_range(r[1].first, r[1].second));
-                    seq = r[2];
-                    cnt = lexical_cast<uint32_t>(make_iterator_range(r[3].first, r[3].second));
-                    counts[chr][pos][seq] += cnt;
+                    const typed_tsv_row& r = *t;
+                    locus loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
+                    double kld = any_cast<double>(r[7]);
+                    klds[loc].push_back(kld);
                 }
             }
 
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
-            out << tabs({"chr", "pos", "seq", "count"}) << endl;
-            for (auto i = counts.begin(); i != counts.end(); ++i)
+            out << tabs({"chr", "pos", "k", "theta"}) << endl;
+            for (auto itr = klds.begin(); itr != klds.end(); ++itr)
             {
-                const string& chr = i->first;
-                for (auto j = i->second.begin(); j != i->second.end(); ++j)
+                const locus& loc = itr->first;
+                const vector<double>& xs = itr->second;
+                double n = xs.size();
+                double sx = 0.0;
+                double sxl = 0.0;
+                double sl = 0.0;
+                for (size_t i = 0; i < xs.size(); ++i)
                 {
-                    const uint32_t& pos = j->first;
-                    for (auto k = j->second.begin(); k != j->second.end(); ++k)
-                    {
-                        const string& seq = k->first;
-                        const size_t& cnt = k->second;
-                        out << chr
-                            << '\t' << pos
-                            << '\t' << seq
-                            << '\t' << cnt
-                            << endl;
-                    }
+                    double x = xs[i];
+                    double lx = std::log(x);
+                    sx += x;
+                    sl += lx;
+                    sxl += x*lx;
                 }
+                double k = n*sx / (n*sxl - sl*sx);
+                double theta = (n*sxl - sl*sx)/(n*n);
+                out << loc.first
+                    << '\t' << loc.second
+                    << '\t' << k
+                    << '\t' << theta
+                    << endl;
             }
         }
 
@@ -99,7 +100,7 @@ namespace // anonymous
         {
             namespace po = boost::program_options;
 
-            command_options opts("merge counts");
+            command_options opts("fit per locus distributions");
             opts.add_options()
                 ("help,h", "produce help message")
                 ("inputs", po::value<strings>(), "input filename, defaults to '-' for stdin")
@@ -107,7 +108,7 @@ namespace // anonymous
                 ;
 
             po::positional_options_description pos;
-            pos.add("input", -1);
+            pos.add("inputs", -1);
 
             po::variables_map vm;
             po::parsed_options parsed
