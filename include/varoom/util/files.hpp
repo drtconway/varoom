@@ -107,7 +107,7 @@ namespace varoom
         {
         public:
             gzip_output_file_holder(const std::string& p_name)
-                : m_file(p_name, std::ios_base::in | std::ios_base::binary)
+                : m_file(p_name, std::ios_base::out | std::ios_base::binary)
             {
                 m_filter.push(m_gzip);
                 m_filter.push(m_file);
