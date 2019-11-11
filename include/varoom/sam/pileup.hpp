@@ -28,7 +28,7 @@ namespace varoom
                            const std::string& p_seq, const std::string& p_cigar,
                            bool p_rc = false)
         {
-            if (p_chr < m_chr || (p_chr == m_chr && p_pos < m_pos))
+            if (p_chr == m_chr && p_pos < m_pos)
             {
                 throw std::domain_error("sam file not in sorted order.");
             }
