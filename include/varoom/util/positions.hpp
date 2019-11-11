@@ -61,6 +61,13 @@ namespace varoom
             pos = position(n);
         }
     };
+    
+    struct tx_location
+    {
+        accession chr;
+        position pos;
+        int64_t off;
+    };
 
     struct locus
     {
