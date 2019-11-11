@@ -17,8 +17,8 @@ exe klbam
       src/klbam/sample_dist.cpp
       src/klbam/fit_gamma.cpp
       src/klbam/sample_pval.cpp
-      boost_iostreams boost_program_options
-      htslib
+      boost_iostreams boost_log boost_program_options
+      htslib pthread
     ;
 
 #exe profile_vcfs
