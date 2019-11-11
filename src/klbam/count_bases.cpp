@@ -1,3 +1,4 @@
+#include "varoom/sam/bam_reader.hpp"
 #include "varoom/command.hpp"
 #include "varoom/sam.hpp"
 #include "varoom/sam/pileup.hpp"
@@ -36,13 +37,7 @@ namespace // anonymous
         {
         }
 
-        string chr;
-        uint32_t pos;
-        ostream& out;
-        const tsv_column_type& ind;
-        map<string,size_t> counts;
-        string other;
-
+    private:
         virtual void output_pileup(const string& p_chr, const uint32_t& p_pos, const string& p_base, const size_t& p_count)
         {
             if (p_chr == chr && p_pos == pos)
@@ -108,36 +103,93 @@ namespace // anonymous
             counts.clear();
             counts[p_base] = p_count;
         }
+
+        string chr;
+        uint32_t pos;
+        ostream& out;
+        const tsv_column_type& ind;
+        map<string,size_t> counts;
+        string other;
     };
 
     class count_bases_command : public varoom::command
     {
     public:
         count_bases_command(const string& p_input_filename,
-                            const string& p_output_filename)
+                            const string& p_output_filename,
+                            bool p_force_sam, bool p_force_bam)
             : m_input_filename(p_input_filename),
-              m_output_filename(p_output_filename)
+              m_output_filename(p_output_filename),
+              m_force_sam(p_force_sam), m_force_bam(p_force_bam)
         {
         }
 
         virtual void operator()()
         {
+            bool use_sam = true; // if there's no filename, default to SAM.
+            if (m_force_sam && m_force_bam)
+            {
+                cerr << "usage error: both --sam|-s and --bam|-b specificed" << endl;
+                return;
+            }
+            if (m_force_sam || m_force_bam)
+            {
+                use_sam = m_force_sam;
+            }
+            else if (ends_with(m_input_filename, ".sam") || ends_with(m_input_filename, ".sam.gz"))
+            {
+                use_sam = true;
+            }
+            else if (ends_with(m_input_filename, ".bam"))
+            {
+                use_sam = false;
+            }
+            
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
             out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
 
             pileup_holder ph(out);
-            input_file_holder_ptr inp = files::in(m_input_filename);
-            for (sam_reader r(**inp); r.more(); ++r)
+            if (use_sam)
             {
-                const sam_alignment& aln = *r;
-                ph.add_alignment(aln.chr, aln.pos, aln.seq, aln.cigar, sam_flags::is_reverse(aln.flags));
+                input_file_holder_ptr inp = files::in(m_input_filename);
+                for (sam_reader r(**inp); r.more(); ++r)
+                {
+                    const sam_alignment& aln = *r;
+                    ph.add_alignment(aln.chr, aln.pos, aln.seq, aln.cigar, sam_flags::is_reverse(aln.flags));
+                }
+            }
+            else
+            {
+                for (bam_reader r(m_input_filename); r.more(); ++r)
+                {
+                    const sam_alignment& aln = *r;
+                    ph.add_alignment(aln.chr, aln.pos, aln.seq, aln.cigar, sam_flags::is_reverse(aln.flags));
+                }
             }
         }
 
     private:
+        static bool ends_with(const std::string& p_str, const std::string& p_suffix)
+        {
+            auto s = p_str.rbegin();
+            auto t = p_suffix.rbegin();
+            while (s != p_str.rend() && t != p_suffix.rend())
+            {
+                if (*s != *t)
+                {
+                    return false;
+                }
+                ++s;
+                ++t;
+            }
+            return t == p_suffix.rend();
+        }
+
         const string m_input_filename;
         const string m_output_filename;
+        const bool m_force_sam;
+        const bool m_force_bam;
     };
 
     class count_bases_factory : public command_factory
@@ -153,6 +205,8 @@ namespace // anonymous
             command_options opts("count bases");
             opts.add_options()
                 ("help,h", "produce help message")
+                ("bam,b", "force the interpretation of the input as BAM")
+                ("sam,s", "force the interpretation of the input as SAM")
                 ("regions,r", po::value<string>(), "only include counts from regions in the named BED file")
                 ("input,i", po::value<string>()->default_value("-"), "input filename, defaults to '-' for stdin")
                 ("output,o", po::value<string>()->default_value("-"), "output filename, defaults to '-' for stdout")
@@ -181,6 +235,8 @@ namespace // anonymous
             {
                 params["regions"] = vm["regions"].as<string>();
             }
+            params["sam"] = (vm.count("sam") > 0);
+            params["bam"] = (vm.count("bam") > 0);
 
             return params;
         }
@@ -193,7 +249,9 @@ namespace // anonymous
             }
             string input_fn = p_params["input"];
             string output_fn = p_params["output"];
-            return command_ptr(new count_bases_command(input_fn, output_fn));
+            bool force_sam = p_params["sam"];
+            bool force_bam = p_params["bam"];
+            return command_ptr(new count_bases_command(input_fn, output_fn, force_sam, force_bam));
         }
     };
     

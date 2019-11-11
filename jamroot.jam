@@ -8,6 +8,7 @@ lib boost_log : : <name>boost_log ;
 lib boost_iostreams : : <name>boost_iostreams ;
 lib boost_program_options : : <name>boost_program_options ;
 lib pthread : : <name>pthread ;
+lib htslib : : <name>hts ;
 
 exe klbam
     : src/klbam.cpp
@@ -17,6 +18,7 @@ exe klbam
       src/klbam/fit_gamma.cpp
       src/klbam/sample_pval.cpp
       boost_iostreams boost_program_options
+      htslib
     ;
 
 #exe profile_vcfs
