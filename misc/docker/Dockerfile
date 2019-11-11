@@ -1,4 +1,5 @@
-FROM ubuntu
+FROM ubuntu AS builder
+ADD gather_shared.sh /gather_shared.sh
 RUN apt update && \
     apt upgrade -y && \
     apt install -y gcc g++ git \
@@ -9,8 +10,9 @@ RUN apt update && \
     cd varoom  && \
     b2 release  && \
     cp ./bin/gcc-7/release/klbam /bin  && \
-    cd ..  && \
-    rm -rf varoom && \
-    apt remove -y gcc g++ git && \
-    apt autoremove -y && \
-    rm -rf /var/lib/apt/lists/*
+    /gather_shared.sh /bin/klbam
+
+FROM ubuntu
+ADD unpack_shared.sh /unpack_shared.sh
+COPY --from=builder /.shared_objects.tgz /
+RUN /unpack_shared.sh && rm /unpack_shared.sh
