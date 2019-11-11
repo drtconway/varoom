@@ -8,6 +8,7 @@
 #include <initializer_list>
 
 using namespace std;
+using namespace boost;
 using namespace varoom;
 
 namespace // anonymous
@@ -26,20 +27,105 @@ namespace // anonymous
         return s;
     }
 
+    typedef pair<uint32_t,uint32_t> region;
+    typedef vector<region> region_list;
+    typedef map<string,region_list> regions;
+
+    void read_bed_file(const string& p_filename, regions& p_res)
+    {
+        const tsv_column_type& ut = *tsv_column_type::get("uint");
+        input_file_holder_ptr inp = files::in(p_filename);
+        for (tsv_reader in(**inp); in.more(); ++in)
+        {
+            const tsv_row& r = *in;
+            region v;
+            v.first = any_cast<uint64_t>(ut.make(r[1]));
+            v.second = any_cast<uint64_t>(ut.make(r[2]));
+            p_res[string(r[0])].push_back(v);
+        }
+
+        // Make sure they're sorted
+        //
+        for (auto itr = p_res.begin(); itr != p_res.end(); ++itr)
+        {
+            sort(itr->second.begin(), itr->second.end());
+        }
+    }
+
+    bool contains(const regions& p_reg, const string& p_chr, uint32_t p_pos)
+    {
+        // The empty set is interpreted as include everything!
+        //
+        if (p_reg.size() == 0)
+        {
+            return true;
+        }
+
+        auto itr = p_reg.find(p_chr);
+        if (itr == p_reg.end())
+        {
+            return false;
+        }
+        const region_list& rs = itr->second;
+
+        auto fst = rs.begin();
+        auto snd = rs.end();
+        size_t count = distance(fst, snd);
+        while (count > 0)
+        {
+            auto it = fst;
+            size_t step = count / 2;
+            std::advance(it, step);
+            if (it->second < p_pos)
+            {
+                fst = ++it;
+                count -= step + 1;
+            }
+            else
+            {
+                count = step;
+            }
+        }
+        if (fst != snd)
+        {
+            return fst->first <= p_pos && p_pos < fst->second;
+        }
+        return false;
+
+        if (0)
+        {
+            for (size_t i = 0; i < rs.size(); ++i)
+            {
+                const region& r = rs[i];
+                if (r.first <= p_pos && p_pos < r.second)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+
     typedef pair<string,size_t> seq_and_count;
     typedef vector<seq_and_count> seq_and_count_list;
 
     class pileup_holder : public varoom::sam_pileup
     {
     public:
-        pileup_holder(ostream& p_out)
-            : chr("<unknown>"), pos(0), out(p_out), ind(*tsv_column_type::get("[str=uint]"))
+        pileup_holder(ostream& p_out, const regions& p_reg)
+            : chr("<unknown>"), pos(0), out(p_out), reg(p_reg), ind(*tsv_column_type::get("[str=uint]"))
         {
         }
 
     private:
         virtual void output_pileup(const string& p_chr, const uint32_t& p_pos, const string& p_base, const size_t& p_count)
         {
+            if (!contains(reg, p_chr, p_pos))
+            {
+                return;
+            }
+
             if (p_chr == chr && p_pos == pos)
             {
                 counts[p_base] = p_count;
@@ -107,6 +193,7 @@ namespace // anonymous
         string chr;
         uint32_t pos;
         ostream& out;
+        const regions& reg;
         const tsv_column_type& ind;
         map<string,size_t> counts;
         string other;
@@ -122,6 +209,17 @@ namespace // anonymous
               m_output_filename(p_output_filename),
               m_force_sam(p_force_sam), m_force_bam(p_force_bam)
         {
+        }
+
+        count_bases_command(const string& p_input_filename,
+                            const string& p_output_filename,
+                            const string& p_regions_filename,
+                            bool p_force_sam, bool p_force_bam)
+            : m_input_filename(p_input_filename),
+              m_output_filename(p_output_filename),
+              m_force_sam(p_force_sam), m_force_bam(p_force_bam)
+        {
+            read_bed_file(p_regions_filename, m_regions);
         }
 
         virtual void operator()()
@@ -149,7 +247,7 @@ namespace // anonymous
             ostream& out = **outp;
             out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
 
-            pileup_holder ph(out);
+            pileup_holder ph(out, m_regions);
             if (use_sam)
             {
                 input_file_holder_ptr inp = files::in(m_input_filename);
@@ -170,7 +268,7 @@ namespace // anonymous
         }
 
     private:
-        static bool ends_with(const std::string& p_str, const std::string& p_suffix)
+        static bool ends_with(const string& p_str, const string& p_suffix)
         {
             auto s = p_str.rbegin();
             auto t = p_suffix.rbegin();
@@ -190,6 +288,7 @@ namespace // anonymous
         const string m_output_filename;
         const bool m_force_sam;
         const bool m_force_bam;
+        regions m_regions;
     };
 
     class count_bases_factory : public command_factory
@@ -198,7 +297,7 @@ namespace // anonymous
         count_bases_factory() {}
 
         virtual json parse(const command_options& p_global_opts, const command_parameters& p_globals,
-                           const std::vector<std::string>& p_args) const
+                           const vector<string>& p_args) const
         {
             namespace po = boost::program_options;
 
@@ -251,7 +350,15 @@ namespace // anonymous
             string output_fn = p_params["output"];
             bool force_sam = p_params["sam"];
             bool force_bam = p_params["bam"];
-            return command_ptr(new count_bases_command(input_fn, output_fn, force_sam, force_bam));
+            if (p_params.count("regions"))
+            {
+                string regions_fn = p_params["regions"];
+                return command_ptr(new count_bases_command(input_fn, output_fn, regions_fn, force_sam, force_bam));
+            }
+            else
+            {
+                return command_ptr(new count_bases_command(input_fn, output_fn, force_sam, force_bam));
+            }
         }
     };
     
