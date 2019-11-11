@@ -60,7 +60,7 @@ namespace // anonymous
 
             output_file_holder_ptr outp = files::out(m_output_filename);
             std::ostream& out = **outp;
-            out << tabs({"chr", "pos", "ref", "nA", "nC", "nG", "nT", "indel", "kld", "pval"}) << std::endl;
+            out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel", "kld", "pval"}) << std::endl;
 
             input_file_holder_ptr inp = files::in(m_input_filename);
 

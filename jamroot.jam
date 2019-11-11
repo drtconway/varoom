@@ -69,6 +69,10 @@ unit-test test_vcf_info
     : tests/vcf/test_vcf_info.cpp boost_test
     ;
 
+unit-test test_strong_typedef
+    : tests/util/test_strong_typedef.cpp boost_test
+    ;
+
 unit-test test_subtext
     : tests/util/test_subtext.cpp boost_test
     ;
