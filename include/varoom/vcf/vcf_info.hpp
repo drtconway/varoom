@@ -11,15 +11,15 @@
 #include "varoom/util/lazy.hpp"
 #endif
 
-#include <map>
+#ifndef VAROOM_UTIL_ORDERED_ASSOCIATION_HPP
+#include "varoom/util/ordered_association.hpp"
+#endif
 
 namespace varoom
 {
     namespace vcf
     {
-        using vcf_info = std::map<std::string,std::string>;
-
-        using lazy_vcf_info = lazy<vcf_info>;
+        using vcf_info = ordered_association;
 
         class vcf_info_subtext
         {
@@ -39,9 +39,9 @@ namespace varoom
                 m_sources.push_back(p_val_source);
             }
 
-            std::map<std::string,std::string> make() const
+            vcf_info make() const
             {
-                std::map<std::string,std::string> res;
+                ordered_association res;
 
                 if (m_sources.size() == 1)
                 {

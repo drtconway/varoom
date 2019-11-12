@@ -28,7 +28,7 @@ namespace varoom
                 std::string id;
                 std::string ref;
                 std::string alt;
-                std::int64_t qual;
+                double qual;
                 std::string filter;
                 std::vector<vcf_info_subtext> genotype_makers;
 
@@ -57,7 +57,7 @@ namespace varoom
                     qual = boost::lexical_cast<double>(boost::make_iterator_range(parts[5].first, parts[5].second));
                     filter = parts[6];
                     vcf_info_subtext info_maker(parts[7]);
-                    lazy_vcf_info info([info_maker]() { return info_maker.make(); });
+                    lazy<vcf_info> info([info_maker]() { return info_maker.make(); });
 
                     genotype_makers.clear();
                     for (size_t i = 9; i < parts.size(); ++i)

@@ -160,9 +160,9 @@ namespace // anonymous
                                 const std::string& p_id,
                                 const std::string& p_ref,
                                 const std::string& p_alt,
-                                const std::int64_t& p_qual,
+                                const double& p_qual,
                                 const std::string& p_filter,
-                                const varoom::vcf::lazy_vcf_info& p_info,
+                                const varoom::lazy<varoom::vcf::vcf_info>& p_info,
                                 const varoom::lazy<std::vector<varoom::vcf::vcf_info>>& p_genotypes)
         {
             BOOST_CHECK_EQUAL(p_pos, positions[ind++]);

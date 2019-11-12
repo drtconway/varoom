@@ -21,9 +21,9 @@ namespace varoom
                                     const std::string& p_id,
                                     const std::string& p_ref,
                                     const std::string& p_alt,
-                                    const std::int64_t& p_qual,
+                                    const double& p_qual,
                                     const std::string& p_filter,
-                                    const lazy_vcf_info& p_info,
+                                    const lazy<vcf_info>& p_info,
                                     const lazy<std::vector<vcf_info>>& p_genotypes) = 0;
 
             virtual void error(const size_t& p_line_no, const std::string& p_line, const std::string& p_message) = 0;

@@ -4,6 +4,7 @@
 #include "varoom/seq/sequence_factory.hpp"
 #include "varoom/vcf/vcf_writer.hpp"
 #include "varoom/util/lazy.hpp"
+#include "varoom/util/ordered_association.hpp"
 
 #include <cmath>
 #include <initializer_list>
@@ -35,6 +36,9 @@ namespace // anonymous
         virtual void operator()()
         {
             sequence_factory sfac(m_genome_directory);
+
+            output_file_holder_ptr outp = files::out(m_output_filename);
+            vcf_writer out(**outp);
 
             vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]", "flt", "flt"};
             input_file_holder_ptr inp = files::in(m_input_filename);

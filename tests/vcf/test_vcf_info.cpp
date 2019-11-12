@@ -14,21 +14,22 @@ BOOST_AUTO_TEST_CASE( test1 )
     vcf_info ifo = ifo_mkr.make();
     BOOST_CHECK_EQUAL(ifo.size(), 14);
 
-    auto ks = ifo.begin();
-    BOOST_CHECK_EQUAL(ks->first, "AF_ESP");
-    BOOST_CHECK_EQUAL((++ks)->first, "AF_EXAC");
-    BOOST_CHECK_EQUAL((++ks)->first, "ALLELEID");
-    BOOST_CHECK_EQUAL((++ks)->first, "CLNDISDB");
-    BOOST_CHECK_EQUAL((++ks)->first, "CLNDN");
-    BOOST_CHECK_EQUAL((++ks)->first, "CLNHGVS");
-    BOOST_CHECK_EQUAL((++ks)->first, "CLNREVSTAT");
-    BOOST_CHECK_EQUAL((++ks)->first, "CLNSIG");
-    BOOST_CHECK_EQUAL((++ks)->first, "CLNVC");
-    BOOST_CHECK_EQUAL((++ks)->first, "CLNVCSO");
-    BOOST_CHECK_EQUAL((++ks)->first, "GENEINFO");
-    BOOST_CHECK_EQUAL((++ks)->first, "MC");
-    BOOST_CHECK_EQUAL((++ks)->first, "ORIGIN");
-    BOOST_CHECK_EQUAL((++ks)->first, "RS");
+    size_t i = 0;
+    BOOST_CHECK_EQUAL(ifo[i++].first, "AF_ESP");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "AF_EXAC");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "ALLELEID");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "CLNDISDB");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "CLNDN");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "CLNHGVS");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "CLNREVSTAT");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "CLNSIG");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "CLNVC");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "CLNVCSO");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "GENEINFO");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "MC");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "ORIGIN");
+    BOOST_CHECK_EQUAL(ifo[i++].first, "RS");
+    BOOST_CHECK_EQUAL(ifo.size(), i);
 }
 
 BOOST_AUTO_TEST_CASE( test4 )
