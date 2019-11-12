@@ -54,6 +54,7 @@ namespace varoom
                 {
                     return path;
                 }
+                throw std::runtime_error("could not locate sequence data");
             }
 
             void load_accession(const std::string& p_accession_name)

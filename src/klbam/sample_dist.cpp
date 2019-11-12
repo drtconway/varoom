@@ -35,28 +35,6 @@ namespace // anonymous
     typedef pair<string,size_t> seq_and_count;
     typedef vector<seq_and_count> seq_and_count_list;
 
-    struct counts
-    {
-        size_t nA;
-        size_t nC;
-        size_t nG;
-        size_t nT;
-        map<string,size_t> indels;
-
-        counts()
-            : nA(0), nC(0), nG(0), nT(0)
-        { }
-
-        counts(size_t p_nA, size_t p_nC, size_t p_nG, size_t p_nT, const seq_and_count_list& p_indels)
-            : nA(p_nA), nC(p_nC), nG(p_nG), nT(p_nT)
-        {
-            for (auto itr = p_indels.begin(); itr != p_indels.end(); ++itr)
-            {
-                indels[itr->first] = itr->second;
-            }
-        }
-    };
-
     class sample_dist_command : public varoom::command
     {
     public:

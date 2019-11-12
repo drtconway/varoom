@@ -8,6 +8,15 @@ namespace varoom
     class text
     {
     public:
+        static char to_upper(char p_ch)
+        {
+            if ('a' <= p_ch && p_ch <= 'z')
+            {
+                return 'A' + (p_ch - 'a');
+            }
+            return p_ch;
+        }
+
         static std::string tabs(std::initializer_list<const char*> p_parts)
         {
             std::string s;

@@ -4,7 +4,7 @@
 #include "varoom/seq/sequence_factory.hpp"
 #include "varoom/vcf/vcf_writer.hpp"
 #include "varoom/util/lazy.hpp"
-#include "varoom/util/ordered_association.hpp"
+#include "varoom/util/text.hpp"
 
 #include <cmath>
 #include <initializer_list>
@@ -35,6 +35,10 @@ namespace // anonymous
 
         virtual void operator()()
         {
+            static uint64_t minCov = 100;
+            static uint64_t minAlleleCov = 3;
+            static double pval_cutoff = 1e-4;
+
             sequence_factory sfac(m_genome_directory);
 
             output_file_holder_ptr outp = files::out(m_output_filename);
@@ -44,10 +48,54 @@ namespace // anonymous
             input_file_holder_ptr inp = files::in(m_input_filename);
             for (typed_tsv_reader s(**inp, types); s.more(); ++s)
             {
+                const typed_tsv_row& r = *s;
+                locus loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
+                uint64_t nA = any_cast<uint64_t>(r[2]);
+                uint64_t nC = any_cast<uint64_t>(r[3]);
+                uint64_t nG = any_cast<uint64_t>(r[4]);
+                uint64_t nT = any_cast<uint64_t>(r[5]);
+                uint64_t cov = nA + nC + nG + nT;
+                const seq_and_count_list& indels = any_cast<const seq_and_count_list&>(r[6]);
+                double kld = any_cast<double>(r[7]);
+                double pval = any_cast<double>(r[8]);
+
+                if (cov < minCov || pval > pval_cutoff)
+                {
+                    continue;
+                }
+
+                const std::string& seq = sfac[loc.first].second;
+                const char ref = text::to_upper(seq[loc.second - 1]); // Strings are 0-indexed.
+
+                if (nA >= minAlleleCov && ref != 'A')
+                {
+                    make_vcf_row(out, loc, ref, 'A', nA, cov, kld, pval);
+                }
+                if (nC >= minAlleleCov && ref != 'C')
+                {
+                    make_vcf_row(out, loc, ref, 'C', nC, cov, kld, pval);
+                }
+                if (nG >= minAlleleCov && ref != 'G')
+                {
+                    make_vcf_row(out, loc, ref, 'G', nG, cov, kld, pval);
+                }
+                if (nT >= minAlleleCov && ref != 'T')
+                {
+                    make_vcf_row(out, loc, ref, 'T', nT, cov, kld, pval);
+                }
+                // XXX indels
             }
         }
 
     private:
+        void make_vcf_row(vcf_writer& p_out, const locus& p_loc, char p_ref, char p_alt, uint64_t p_altCov, uint64_t p_cov, double p_kld, double p_pval)
+        {
+            static std::string dot(".");
+            static std::string pass("PASS");
+            double phred = -10*std::log10(1 - p_pval);
+            vcf_info ifo;
+            p_out(p_loc.first, p_loc.second, dot, std::string(1, p_ref),  std::string(1, p_alt), phred, pass, make_lazy(ifo), make_lazy(std::vector<vcf_info>()));
+        }
 
         const string m_genome_directory;
         const string m_input_filename;

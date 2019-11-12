@@ -46,6 +46,12 @@ namespace varoom
         mutable T const& (*m_thunk)(const lazy*);
         mutable T m_value;
     };
+
+    template <typename T>
+    lazy<T> make_lazy(const T& p_value)
+    {
+        return lazy<T>([p_value]() { return p_value; });
+    }
 }
 // namespace varoom
 

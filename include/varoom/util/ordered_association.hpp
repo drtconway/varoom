@@ -57,6 +57,12 @@ namespace varoom
             return m_values[i];
         }
 
+        void clear()
+        {
+            m_keys.clear();
+            m_values.clear();
+        }
+
     private:
         int find(const std::string& p_key) const
         {
