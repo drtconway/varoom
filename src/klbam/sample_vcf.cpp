@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <initializer_list>
+#include <boost/format.hpp>
 
 using namespace std;
 using namespace boost;
@@ -64,7 +65,7 @@ namespace // anonymous
                     continue;
                 }
 
-                const std::string& seq = sfac[loc.first].second;
+                const string& seq = sfac[loc.first].second;
                 const char ref = text::to_upper(seq[loc.second - 1]); // Strings are 0-indexed.
 
                 if (nA >= minAlleleCov && ref != 'A')
@@ -90,11 +91,17 @@ namespace // anonymous
     private:
         void make_vcf_row(vcf_writer& p_out, const locus& p_loc, char p_ref, char p_alt, uint64_t p_altCov, uint64_t p_cov, double p_kld, double p_pval)
         {
-            static std::string dot(".");
-            static std::string pass("PASS");
-            double phred = -10*std::log10(1 - p_pval);
+            static string dot(".");
+            static string pass("PASS");
+            double phred = -10*log10(p_pval);
             vcf_info ifo;
-            p_out(p_loc.first, p_loc.second, dot, std::string(1, p_ref),  std::string(1, p_alt), phred, pass, make_lazy(ifo), make_lazy(std::vector<vcf_info>()));
+            ifo["AC"] = lexical_cast<string>(p_altCov);
+            ifo["AF"] = str(format("%2.2f") % (double(p_altCov)/double(p_cov)));
+            ifo["DP"] = lexical_cast<string>(p_cov);
+            ifo["KLD"] = str(format("%2.2f") % p_kld);
+            ifo["PVAL"] = str(format("%2.2g") % p_pval);
+            ifo["HGVSg"] = str(format("%s:g.%d%c>%c") % p_loc.first % p_loc.second % p_ref % p_alt);
+            p_out(p_loc.first, p_loc.second, dot, string(1, p_ref),  string(1, p_alt), phred, pass, make_lazy(ifo), make_lazy(vector<vcf_info>()));
         }
 
         const string m_genome_directory;
@@ -108,7 +115,7 @@ namespace // anonymous
         sample_vcf_factory() {}
 
         virtual json parse(const command_options& p_global_opts, const command_parameters& p_globals,
-                           const std::vector<std::string>& p_args) const
+                           const vector<string>& p_args) const
         {
             namespace po = boost::program_options;
 
