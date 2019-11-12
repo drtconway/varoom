@@ -2,14 +2,12 @@ FROM ubuntu AS builder
 ADD misc/docker/gather_shared.sh /gather_shared.sh
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y gcc g++ git \
+    apt install -y gcc g++ \
         libboost-dev libboost-iostreams-dev libboost-log-dev libboost-program-options-dev libboost-test-dev libboost-tools-dev \
         libhts-dev \
         nlohmann-json-dev && \
-    git clone https://github.com/drtconway/varoom.git  && \
-    cd varoom  && \
-    b2 release  && \
-    cp ./bin/gcc-7/release/klbam /bin  && \
+    b2 release && \
+    cp ./bin/gcc-7/release/klbam /bin && \
     /gather_shared.sh /bin/klbam
 
 FROM ubuntu
