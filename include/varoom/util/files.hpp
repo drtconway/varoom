@@ -9,6 +9,10 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <sys/stat.h>
 
+#ifndef VAROOM_UTIL_TEXT_HPP
+#include "varoom/util/text.hpp"
+#endif
+
 namespace varoom
 {
     class input_file_holder
@@ -136,7 +140,7 @@ namespace varoom
             {
                 return input_file_holder_ptr(new detail::cin_file_holder);
             }
-            if (ends_with(p_name, ".gz"))
+            if (varoom::text::ends_with(p_name, ".gz"))
             {
                 return input_file_holder_ptr(new detail::gzip_input_file_holder(p_name));
             }
@@ -149,7 +153,7 @@ namespace varoom
             {
                 return output_file_holder_ptr(new detail::cout_file_holder);
             }
-            if (ends_with(p_name, ".gz"))
+            if (varoom::text::ends_with(p_name, ".gz"))
             {
                 return output_file_holder_ptr(new detail::gzip_output_file_holder(p_name));
             }
@@ -160,23 +164,6 @@ namespace varoom
         {
             struct stat buf;
             return (stat(p_name.c_str(), &buf) == 0);
-        }
-
-    private:
-        static bool ends_with(const std::string& p_str, const std::string& p_suffix)
-        {
-            auto s = p_str.rbegin();
-            auto t = p_suffix.rbegin();
-            while (s != p_str.rend() && t != p_suffix.rend())
-            {
-                if (*s != *t)
-                {
-                    return false;
-                }
-                ++s;
-                ++t;
-            }
-            return t == p_suffix.rend();
         }
     };
 }

@@ -16,20 +16,6 @@ using namespace varoom::vcf;
 
 namespace // anonymous
 {
-    string tabs(initializer_list<const char*> p_parts)
-    {
-        string s;
-        for (auto i = p_parts.begin(); i != p_parts.end(); ++i)
-        {
-            if (s.size() > 0)
-            {
-                s.push_back('\t');
-            }
-            s.insert(s.size(), *i);
-        }
-        return s;
-    }
-
     typedef pair<string,uint32_t> locus;
     typedef pair<string,size_t> seq_and_count;
     typedef vector<seq_and_count> seq_and_count_list;
@@ -49,8 +35,8 @@ namespace // anonymous
         virtual void operator()()
         {
             sequence_factory sfac(m_genome_directory);
-            vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]", "flt", "flt"};
 
+            vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]", "flt", "flt"};
             input_file_holder_ptr inp = files::in(m_input_filename);
             for (typed_tsv_reader s(**inp, types); s.more(); ++s)
             {

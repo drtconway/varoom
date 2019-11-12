@@ -1,6 +1,7 @@
 #include "varoom/command.hpp"
 #include "varoom/util/typed_tsv.hpp"
 #include "varoom/util/files.hpp"
+#include "varoom/util/text.hpp"
 
 #include <cmath>
 #include <initializer_list>
@@ -11,20 +12,6 @@ using namespace varoom;
 
 namespace // anonymous
 {
-    string tabs(initializer_list<const char*> p_parts)
-    {
-        string s;
-        for (auto i = p_parts.begin(); i != p_parts.end(); ++i)
-        {
-            if (s.size() > 0)
-            {
-                s.push_back('\t');
-            }
-            s.insert(s.size(), *i);
-        }
-        return s;
-    }
-
     double kl_divergence(const std::vector<double>& P, const std::vector<double>& Q)
     {
         // assert P.size() == Q.size()
@@ -86,7 +73,7 @@ namespace // anonymous
         {
             output_file_holder_ptr outp = files::out(m_output_filename);
             std::ostream& out = **outp;
-            out << tabs({"chr", "pos", "ref", "nA", "nC", "nG", "nT", "indel", "kld"}) << std::endl;
+            out << text::tabs({"chr", "pos", "ref", "nA", "nC", "nG", "nT", "indel", "kld"}) << std::endl;
 
             input_file_holder_ptr globp = files::in(m_global_filename);
             input_file_holder_ptr inp = files::in(m_input_filename);

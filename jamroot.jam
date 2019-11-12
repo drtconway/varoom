@@ -93,3 +93,7 @@ unit-test test_vcf_data
 unit-test test_vcf_parser
     : tests/vcf/test_vcf_parser.cpp boost_test
     ;
+
+unit-test test_vcf_writer
+    : tests/vcf/test_vcf_writer.cpp boost_test
+    ;

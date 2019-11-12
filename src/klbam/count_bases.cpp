@@ -3,6 +3,7 @@
 #include "varoom/sam.hpp"
 #include "varoom/sam/pileup.hpp"
 #include "varoom/util/files.hpp"
+#include "varoom/util/text.hpp"
 #include "varoom/util/typed_tsv.hpp"
 
 #include <initializer_list>
@@ -13,20 +14,6 @@ using namespace varoom;
 
 namespace // anonymous
 {
-    string tabs(initializer_list<const char*> p_parts)
-    {
-        string s;
-        for (auto i = p_parts.begin(); i != p_parts.end(); ++i)
-        {
-            if (s.size() > 0)
-            {
-                s.push_back('\t');
-            }
-            s.insert(s.size(), *i);
-        }
-        return s;
-    }
-
     typedef pair<uint32_t,uint32_t> region;
     typedef vector<region> region_list;
     typedef map<string,region_list> regions;
@@ -245,7 +232,7 @@ namespace // anonymous
             
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
-            out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
+            out << text::tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
 
             pileup_holder ph(out, m_regions);
             if (use_sam)

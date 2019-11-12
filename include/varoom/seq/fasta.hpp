@@ -5,6 +5,10 @@
 #include <string>
 #include <boost/algorithm/string/trim.hpp>
 
+#ifndef VAROOM_UTIL_TEXT_HPP
+#include "varoom/util/text.hpp"
+#endif
+
 namespace varoom
 {
     namespace seq
@@ -43,7 +47,7 @@ namespace varoom
                     m_more = false;
                     return;
                 }
-                if (!starts_with(m_next, '>'))
+                if (!varoom::text::starts_with(m_next, '>'))
                 {
                     m_more = false;
                     throw std::domain_error("missing header line.");
@@ -55,7 +59,7 @@ namespace varoom
                 boost::algorithm::trim(m_next);
                 m_curr.first.insert(m_curr.first.end(), m_next.begin() + 1, m_next.end()); // drop the >
 
-                while (std::getline(m_in, m_next) && !starts_with(m_next, '>'))
+                while (std::getline(m_in, m_next) && !varoom::text::starts_with(m_next, '>'))
                 {
                     // Technically, FASTA data may contain whitespace, so we should use code like:
                     //      str.erase(remove_if(str.begin(), str.end(), isspace), str.end());
@@ -63,11 +67,6 @@ namespace varoom
                     boost::algorithm::trim(m_next);
                     m_curr.second += m_next;
                 }
-            }
-
-            static bool starts_with(const std::string& p_str, char p_ch)
-            {
-                return p_str.size() > 0 && p_str.front() == p_ch;
             }
 
             std::istream& m_in;
