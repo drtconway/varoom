@@ -17,6 +17,7 @@ exe klbam
       src/klbam/sample_dist.cpp
       src/klbam/fit_gamma.cpp
       src/klbam/sample_pval.cpp
+      src/klbam/sample_vcf.cpp
       boost_iostreams boost_log boost_program_options
       htslib pthread
     ;
@@ -67,6 +68,10 @@ unit-test test_fastq
 
 unit-test test_vcf_info
     : tests/vcf/test_vcf_info.cpp boost_test
+    ;
+
+unit-test test_lazy
+    : tests/util/test_lazy.cpp boost_test
     ;
 
 unit-test test_strong_typedef

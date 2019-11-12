@@ -7,91 +7,42 @@
 #include "varoom/util/subtext.hpp"
 #endif
 
+#ifndef VAROOM_UTIL_LAZY_HPP
+#include "varoom/util/lazy.hpp"
+#endif
+
+#include <map>
+
 namespace varoom
 {
     namespace vcf
     {
-        class vcf_info
+        using vcf_info = std::map<std::string,std::string>;
+
+        using lazy_vcf_info = lazy<vcf_info>;
+
+        class vcf_info_subtext
         {
         public:
-            vcf_info()
+            vcf_info_subtext()
             {
             }
 
-            vcf_info(const subtext& p_source)
+            vcf_info_subtext(const subtext& p_source)
             {
                 m_sources.push_back(p_source);
             }
 
-            vcf_info(const subtext& p_key_source, const subtext& p_val_source)
+            vcf_info_subtext(const subtext& p_key_source, const subtext& p_val_source)
             {
                 m_sources.push_back(p_key_source);
                 m_sources.push_back(p_val_source);
             }
 
-            size_t size() const
+            std::map<std::string,std::string> make() const
             {
-                scan_if_necessary();
-                return m_keys.size();
-            }
+                std::map<std::string,std::string> res;
 
-            void keys(std::vector<std::string>& p_keys) const
-            {
-                scan_if_necessary();
-                p_keys.insert(p_keys.end(), m_keys.begin(), m_keys.end());
-            }
-
-            template <typename T>
-            bool get(const std::string& p_id, T& p_val) const
-            {
-                scan_if_necessary();
-                int i = find(p_id);
-                if (i < 0)
-                {
-                    return false;
-                }
-                p_val = boost::lexical_cast<T>(static_cast<std::string>(m_vals[i]));
-                return true;
-            }
-
-            template <typename T>
-            bool get(const std::string& p_id, std::vector<T>& p_vals, char p_sep) const
-            {
-                scan_if_necessary();
-                int i = find(p_id);
-                if (i < 0)
-                {
-                    return false;
-                }
-                std::vector<subtext> parts;
-                m_vals[i].split(p_sep, parts);
-                for (size_t j = 0; j < parts.size(); ++j)
-                {
-                    p_vals.push_back(boost::lexical_cast<T>(static_cast<std::string>(parts[j])));
-                }
-                return true;
-            }
-
-        private:
-            int find(const std::string& p_id) const
-            {
-                scan_if_necessary();
-                for (size_t i = 0; i < m_keys.size(); ++i)
-                {
-                    if (m_keys[i] == p_id)
-                    {
-                        return i;
-                    }
-                }
-                return -1;
-            }
-
-            void scan_if_necessary() const
-            {
-                if (m_keys.size() > 0)
-                {
-                    return;
-                }
                 if (m_sources.size() == 1)
                 {
                     std::vector<subtext> parts;
@@ -113,8 +64,7 @@ namespace varoom
                         {
                             subparts[1].second = subparts.back().second;
                         }
-                        m_keys.push_back(subparts[0]);
-                        m_vals.push_back(subparts[1]);
+                        res[subparts[0]] = subparts[1];
                     }
                 }
                 else
@@ -132,15 +82,15 @@ namespace varoom
 
                     for (size_t i = 0; i < key_parts.size(); ++i)
                     {
-                        m_keys.push_back(key_parts[i]);
-                        m_vals.push_back(val_parts[i]);
+                        res[key_parts[i]] = val_parts[i];
                     }
                 }
+
+                return res;
             }
 
+        private:
             std::vector<subtext> m_sources;
-            mutable std::vector<subtext> m_keys;
-            mutable std::vector<subtext> m_vals;
         };
     }
     // namespace vcf

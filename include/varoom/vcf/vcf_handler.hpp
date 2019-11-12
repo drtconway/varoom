@@ -23,8 +23,8 @@ namespace varoom
                                     const std::string& p_alt,
                                     const std::int64_t& p_qual,
                                     const std::string& p_filter,
-                                    const vcf_info& p_info,
-                                    const std::vector<vcf_info>& p_genotypes) = 0;
+                                    const lazy_vcf_info& p_info,
+                                    const lazy<std::vector<vcf_info>>& p_genotypes) = 0;
 
             virtual void error(const size_t& p_line_no, const std::string& p_line, const std::string& p_message) = 0;
         };

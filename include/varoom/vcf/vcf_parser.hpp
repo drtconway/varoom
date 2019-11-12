@@ -30,8 +30,7 @@ namespace varoom
                 std::string alt;
                 std::int64_t qual;
                 std::string filter;
-                vcf_info info;
-                std::vector<vcf_info> genotypes;
+                std::vector<vcf_info_subtext> genotype_makers;
 
                 size_t line_no = 0;
                 while (std::getline(p_in, l))
@@ -57,13 +56,22 @@ namespace varoom
                     alt = parts[4];
                     qual = boost::lexical_cast<double>(boost::make_iterator_range(parts[5].first, parts[5].second));
                     filter = parts[6];
-                    info = vcf_info(parts[7]);
+                    vcf_info_subtext info_maker(parts[7]);
+                    lazy_vcf_info info([info_maker]() { return info_maker.make(); });
 
-                    genotypes.clear();
+                    genotype_makers.clear();
                     for (size_t i = 9; i < parts.size(); ++i)
                     {
-                        genotypes.push_back(vcf_info(parts[8], parts[i]));
+                        genotype_makers.push_back(vcf_info_subtext(parts[8], parts[i]));
                     }
+                    lazy<std::vector<vcf_info>> genotypes([genotype_makers]() {
+                        std::vector<vcf_info> res;
+                        for (size_t i = 0; i < genotype_makers.size(); ++i)
+                        {
+                            res.push_back(genotype_makers[i].make());
+                        }
+                        return res;
+                    });
 
                     m_handler(chr, pos, id, ref, alt, qual, filter, info, genotypes);
                 }

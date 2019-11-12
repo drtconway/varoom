@@ -162,10 +162,67 @@ namespace // anonymous
                                 const std::string& p_alt,
                                 const std::int64_t& p_qual,
                                 const std::string& p_filter,
-                                const varoom::vcf::vcf_info& p_info,
-                                const std::vector<varoom::vcf::vcf_info>& p_genotypes)
+                                const varoom::vcf::lazy_vcf_info& p_info,
+                                const varoom::lazy<std::vector<varoom::vcf::vcf_info>>& p_genotypes)
         {
             BOOST_CHECK_EQUAL(p_pos, positions[ind++]);
+            switch (ind)
+            {
+                case 52:
+                case 127:
+                case 591:
+                case 680:
+                case 692:
+                case 912:
+                case 920:
+                {
+                    BOOST_CHECK_EQUAL(p_info.get().size(), 79);
+                    break;
+                }
+                case 311:
+                case 783:
+                {
+                    BOOST_CHECK_EQUAL(p_info.get().size(), 71);
+                    break;
+                }
+                case 908:
+                case 909:
+                case 910:
+                case 911:
+                case 913:
+                case 914:
+                case 915:
+                case 916:
+                case 917:
+                case 918:
+                case 919:
+                case 921:
+                case 922:
+                case 924:
+                case 925:
+                {
+                    BOOST_CHECK_EQUAL(p_info.get().size(), 83);
+                    break;
+                }
+                {
+                    BOOST_CHECK_EQUAL(p_info.get().size(), 83);
+                    break;
+                }
+                {
+                    BOOST_CHECK_EQUAL(p_info.get().size(), 83);
+                    break;
+                }
+                case 923:
+                {
+                    BOOST_CHECK_EQUAL(p_info.get().size(), 87);
+                    break;
+                }
+                default:
+                {
+                    BOOST_CHECK_EQUAL(p_info.get().size(), 75);
+                    break;
+                }
+            }
         }
 
         virtual void error(const size_t& p_line_no, const std::string& p_line, const std::string& p_message)

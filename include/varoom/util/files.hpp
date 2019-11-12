@@ -7,6 +7,7 @@
 #include <string>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+#include <sys/stat.h>
 
 namespace varoom
 {
@@ -153,6 +154,12 @@ namespace varoom
                 return output_file_holder_ptr(new detail::gzip_output_file_holder(p_name));
             }
             return output_file_holder_ptr(new detail::plain_output_file_holder(p_name));
+        }
+
+        static bool exists(const std::string& p_name)
+        {
+            struct stat buf;
+            return (stat(p_name.c_str(), &buf) == 0);
         }
 
     private:
