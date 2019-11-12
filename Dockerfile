@@ -1,5 +1,9 @@
 FROM ubuntu AS builder
 ADD misc/docker/gather_shared.sh /gather_shared.sh
+ADD include/ include/
+ADD src/ src/
+ADD tests/ tests/
+ADD jamroot.jam jamroot.jam
 RUN apt update && \
     apt upgrade -y && \
     apt install -y gcc g++ \
