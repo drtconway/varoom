@@ -123,6 +123,7 @@ namespace // anonymous
             po::positional_options_description pos;
             pos.add("gamma", 1);
             pos.add("input", 1);
+            pos.add("output", 1);
 
             po::variables_map vm;
             po::parsed_options parsed
