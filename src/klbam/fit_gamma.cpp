@@ -1,6 +1,7 @@
 #include "varoom/command.hpp"
 #include "varoom/util/files.hpp"
 #include "varoom/util/typed_tsv.hpp"
+#include "varoom/util/gamma_estimator.hpp"
 
 #include <cmath>
 #include <boost/lexical_cast.hpp>
@@ -43,7 +44,7 @@ namespace // anonymous
         {
             vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]", "flt"};
 
-            map<locus,vector<double>> klds;
+            map<locus,gamma_estimator> klds;
             for (size_t n = 0; n < m_input_filenames.size(); ++n)
             {
                 input_file_holder_ptr inp = files::in(m_input_filenames[n]);
@@ -62,25 +63,11 @@ namespace // anonymous
             for (auto itr = klds.begin(); itr != klds.end(); ++itr)
             {
                 const locus& loc = itr->first;
-                const vector<double>& xs = itr->second;
-                double n = xs.size();
-                double sx = 0.0;
-                double sxl = 0.0;
-                double sl = 0.0;
-                for (size_t i = 0; i < xs.size(); ++i)
-                {
-                    double x = xs[i];
-                    double lx = std::log(x);
-                    sx += x;
-                    sl += lx;
-                    sxl += x*lx;
-                }
-                double k = n*sx / (n*sxl - sl*sx);
-                double theta = (n*sxl - sl*sx)/(n*n);
+                pair<double,double> v = itr->second();
                 out << loc.first
                     << '\t' << loc.second
-                    << '\t' << k
-                    << '\t' << theta
+                    << '\t' << v.first
+                    << '\t' << v.second
                     << endl;
             }
         }
