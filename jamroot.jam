@@ -50,6 +50,10 @@ unit-test test_hgvsg_parser
     : tests/hgvs/test_hgvsg_parser.cpp boost_test
     ;
 
+unit-test test_kmer_accumulator
+    : tests/kmers/test_kmer_accumulator.cpp boost_test
+    ;
+
 unit-test test_sam_pileup
     : tests/sam/test_pileup.cpp boost_test
     ;
@@ -68,6 +72,10 @@ unit-test test_fastq
 
 unit-test test_vcf_info
     : tests/vcf/test_vcf_info.cpp boost_test
+    ;
+
+unit-test test_codec8
+    : tests/util/test_codec8.cpp boost_test
     ;
 
 unit-test test_lazy
