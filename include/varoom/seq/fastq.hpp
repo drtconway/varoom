@@ -13,9 +13,12 @@ namespace varoom
     namespace seq
     {
         typedef std::tuple<std::string,std::string,std::string,std::string> fastq_read;
+
         class fastq_reader
         {
         public:
+            typedef fastq_read item_type;
+            typedef item_type const& item_result_type;
 
             fastq_reader(std::istream& p_in)
                 : m_in(p_in), m_more(true)
@@ -28,14 +31,15 @@ namespace varoom
                 return m_more;
             }
 
-            const fastq_read& operator*() const
+            item_result_type operator*() const
             {
                 return m_curr;
             }
 
-            void operator++()
+            fastq_reader& operator++()
             {
                 next();
+                return *this;
             }
 
         private:

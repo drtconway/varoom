@@ -63,11 +63,15 @@ unit-test test_sam_reader
     ;
 
 unit-test test_fasta
-    : tests/seq/test_fasta.cpp boost_test
+    : tests/seq/test_fasta.cpp boost_test boost_iostreams
     ;
 
 unit-test test_fastq
-    : tests/seq/test_fastq.cpp boost_test
+    : tests/seq/test_fastq.cpp boost_test boost_iostreams
+    ;
+
+unit-test test_fastq_pair
+    : tests/seq/test_fastq_pair.cpp boost_test boost_iostreams
     ;
 
 unit-test test_vcf_info
