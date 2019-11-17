@@ -241,7 +241,11 @@ namespace // anonymous
                 for (sam_reader r(**inp); r.more(); ++r)
                 {
                     const sam_alignment& aln = *r;
-                    ph.add_alignment(aln.chr, aln.pos, aln.seq, aln.cigar, sam_flags::is_reverse(aln.flags));
+                    if (sam_flags::is_unmapped(aln.flags))
+                    {
+                        continue;
+                    }
+                    ph.add_alignment(aln.chr, aln.pos, aln.seq, aln.cigar);
                 }
             }
             else
@@ -249,7 +253,11 @@ namespace // anonymous
                 for (bam_reader r(m_input_filename); r.more(); ++r)
                 {
                     const sam_alignment& aln = *r;
-                    ph.add_alignment(aln.chr, aln.pos, aln.seq, aln.cigar, sam_flags::is_reverse(aln.flags));
+                    if (sam_flags::is_unmapped(aln.flags))
+                    {
+                        continue;
+                    }
+                    ph.add_alignment(aln.chr, aln.pos, aln.seq, aln.cigar);
                 }
             }
         }

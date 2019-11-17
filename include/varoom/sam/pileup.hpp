@@ -25,8 +25,7 @@ namespace varoom
         }
 
         void add_alignment(const std::string& p_chr, const std::uint32_t& p_pos,
-                           const std::string& p_seq, const std::string& p_cigar,
-                           bool p_rc = false)
+                           const std::string& p_seq, const std::string& p_cigar)
         {
             if (p_chr == m_chr && p_pos < m_pos)
             {
@@ -41,20 +40,6 @@ namespace varoom
             m_chr = p_chr;
             m_pos = p_pos;
 
-            std::string rcBuf;
-            const std::string* seqPtr;
-            if (p_rc)
-            {
-                std::reverse(m_ops.begin(), m_ops.end());
-                varoom::seq::reverse_complement(p_seq, rcBuf);
-                seqPtr = &rcBuf;
-            }
-            else
-            {
-                seqPtr = & p_seq;
-            }
-            const std::string& seq = *seqPtr;
-
             uint32_t i = 0;
             uint32_t j = 0;
             for (auto itr = m_ops.begin(); itr != m_ops.end(); ++itr)
@@ -65,7 +50,7 @@ namespace varoom
                     {
                         for (uint32_t k = 0; k < itr->second; ++k)
                         {
-                            char q = seq[i];
+                            char q = p_seq[i];
                             uint32_t p = p_pos + j;
                             m_pileup[p][atom(q)] += 1;
                             ++i;
@@ -76,7 +61,7 @@ namespace varoom
                     case 'I':
                     {
                         uint32_t n = itr->second;
-                        std::string q = std::string("^") + std::string(seq.begin() + i, seq.begin() + i + n);
+                        std::string q = std::string("^") + std::string(p_seq.begin() + i, p_seq.begin() + i + n);
                         std::uint32_t p = p_pos + j;
                         m_pileup[p][q] += 1;
                         i += n;
