@@ -11,38 +11,39 @@
 
 namespace varoom
 {
-    namespace kmers
+    typedef std::vector<uint8_t> bytes;
+
+    class basic_stream_writer
     {
-        typedef std::vector<uint8_t> bytes;
-
-        class basic_stream_writer
+    public:
+        basic_stream_writer(bytes& p_unique, bytes& p_non_unique)
+            : m_unique(p_unique), m_non_unique(p_non_unique)
         {
-        public:
-            basic_stream_writer(bytes& p_unique, bytes& p_non_unique)
-                : m_unique(p_unique), m_non_unique(p_non_unique)
+        }
+
+        basic_stream_writer& push_back(const std::pair<uint64_t,uint64_t>& p_item)
+        {
+            if (p_item.second == 1)
             {
+                m_unique.push_back(p_item.first);
             }
-
-            basic_stream_writer& push_back(const std::pair<uint64_t,uint64_t>& p_item)
+            else
             {
-                if (p_item.second == 1)
-                {
-                    m_unique.push_back(p_item.first);
-                }
-                else
-                {
-                    m_non_unique.push_back(p_item);
-                }
-                return *this;
+                m_non_unique.push_back(p_item);
             }
+            return *this;
+        }
 
-        private:
-            unique_kmer_stream_writer m_unique;
-            non_unique_kmer_stream_writer m_non_unique;
-        };
+    private:
+        unique_kmer_stream_writer m_unique;
+        non_unique_kmer_stream_writer m_non_unique;
+    };
 
+    class kmer_stream
+    {
+    public:
         template <typename LhsIterator, typename RhsIterator, typename Consumer>
-        void merge(LhsIterator& p_lhs, RhsIterator& p_rhs, Consumer& p_cons)
+        static void merge(LhsIterator& p_lhs, RhsIterator& p_rhs, Consumer& p_cons)
         {
             while (p_lhs.more() & p_rhs.more())
             {
@@ -76,8 +77,7 @@ namespace varoom
                 ++p_rhs;
             }
         }
-    }
-    // namespace kmers
+    };
 }
 // namespace varoom
 

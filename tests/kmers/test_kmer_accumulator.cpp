@@ -6,7 +6,6 @@
 
 using namespace std;
 using namespace varoom;
-using namespace varoom::kmers;
 
 namespace // anonymous
 {
@@ -77,7 +76,7 @@ BOOST_AUTO_TEST_CASE( cons )
     vector<kmer> fwd;
     vector<kmer> rev;
     const size_t K = 8;
-    make(seq, K, fwd, rev);
+    kmers::make(seq, K, fwd, rev);
 
     map<uint64_t,uint64_t> X;
     for (size_t i = 0; i < fwd.size(); ++i)

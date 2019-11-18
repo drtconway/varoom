@@ -9,50 +9,51 @@
 
 namespace varoom
 {
-    namespace kmers
+    typedef std::uint64_t kmer;
+    typedef std::pair<kmer,size_t> kmer_and_pos;
+
+    namespace detail
     {
-        typedef std::uint64_t kmer;
-        typedef std::pair<kmer,size_t> kmer_and_pos;
-
-        namespace detail
+        inline size_t popcnt(const kmer& p_x)
         {
-            size_t popcnt(const kmer& p_x)
-            {
-                return std::bitset<64>(p_x).count();
-            }
-
-            kmer rev_pairs(const kmer& p_x)
-            {
-                static constexpr kmer m2 = 0x3333333333333333ULL;
-                static constexpr kmer m3 = 0x0F0F0F0F0F0F0F0FULL;
-                static constexpr kmer m4 = 0x00FF00FF00FF00FFULL;
-                static constexpr kmer m5 = 0x0000FFFF0000FFFFULL;
-                static constexpr kmer m6 = 0x00000000FFFFFFFFULL;
-
-                kmer x = p_x;
-                x = ((x >> 2) & m2) | ((x & m2) << 2);
-                x = ((x >> 4) & m3) | ((x & m3) << 4);
-                x = ((x >> 8) & m4) | ((x & m4) << 8);
-                x = ((x >> 16) & m5) | ((x & m5) << 16);
-                x = ((x >> 32) & m6) | ((x & m6) << 32);
-                return x;
-            }
+            return std::bitset<64>(p_x).count();
         }
-        // namespace detail
 
-        size_t ham(const kmer& p_x, const kmer& p_y)
+        inline kmer rev_pairs(const kmer& p_x)
+        {
+            static constexpr kmer m2 = 0x3333333333333333ULL;
+            static constexpr kmer m3 = 0x0F0F0F0F0F0F0F0FULL;
+            static constexpr kmer m4 = 0x00FF00FF00FF00FFULL;
+            static constexpr kmer m5 = 0x0000FFFF0000FFFFULL;
+            static constexpr kmer m6 = 0x00000000FFFFFFFFULL;
+
+            kmer x = p_x;
+            x = ((x >> 2) & m2) | ((x & m2) << 2);
+            x = ((x >> 4) & m3) | ((x & m3) << 4);
+            x = ((x >> 8) & m4) | ((x & m4) << 8);
+            x = ((x >> 16) & m5) | ((x & m5) << 16);
+            x = ((x >> 32) & m6) | ((x & m6) << 32);
+            return x;
+        }
+    }
+    // namespace detail
+
+    class kmers
+    {
+    public:
+        static size_t ham(const kmer& p_x, const kmer& p_y)
         {
             static constexpr kmer m = 0x5555555555555555ULL;
             kmer z = p_x ^ p_y;
             return detail::popcnt((z | (z >> 1)) & m);
         }
 
-        kmer reverse_complement(const size_t& p_k, const kmer& p_x)
+        static kmer reverse_complement(const size_t& p_k, const kmer& p_x)
         {
             return detail::rev_pairs(~p_x) >> (64 - 2*p_k);
         }
 
-        bool to_base(const char& p_c, kmer& p_x)
+        static bool to_base(const char& p_c, kmer& p_x)
         {
             switch (p_c)
             {
@@ -77,12 +78,12 @@ namespace varoom
             }
         }
 
-        char to_char(const kmer& p_x)
+        static char to_char(const kmer& p_x)
         {
             return "ACGT"[p_x&3];
         }
 
-        void make(const std::string& p_seq, const size_t& p_k, std::vector<kmer>& p_kmers)
+        static void make(const std::string& p_seq, const size_t& p_k, std::vector<kmer>& p_kmers)
         {
             const kmer M = (1 << (2*p_k)) - 1;
             p_kmers.clear();
@@ -107,7 +108,9 @@ namespace varoom
             }
         }
 
-        void make(const std::string& p_seq, const size_t& p_k, std::vector<kmer>& p_fwd, std::vector<kmer>& p_rev)
+        static void make(const std::string& p_seq, const size_t& p_k,
+                         std::vector<kmer>& p_fwd,
+                         std::vector<kmer>& p_rev)
         {
             const kmer M = (1 << (2*p_k)) - 1;
             const size_t S = 2*(p_k - 1);
@@ -138,8 +141,9 @@ namespace varoom
             }
         }
 
-        void make(const std::string& p_seq, const size_t& p_k,
-                  std::vector<kmer_and_pos>& p_fwd, std::vector<kmer_and_pos>& p_rev)
+        static void make(const std::string& p_seq, const size_t& p_k,
+                         std::vector<kmer_and_pos>& p_fwd,
+                         std::vector<kmer_and_pos>& p_rev)
         {
             const kmer M = (1 << (2*p_k)) - 1;
             const size_t S = 2*(p_k - 1);
@@ -172,7 +176,7 @@ namespace varoom
             }
         }
 
-        void render(const size_t& p_k, const kmer& p_x, std::string& p_res)
+        static void render(const size_t& p_k, const kmer& p_x, std::string& p_res)
         {
             p_res.clear();
             kmer x = p_x;
@@ -184,13 +188,13 @@ namespace varoom
             std::reverse(p_res.begin(), p_res.end());
         }
 
-        std::string render(const size_t& p_k, const kmer& p_x)
+        static std::string render(const size_t& p_k, const kmer& p_x)
         {
             std::string s;
             render(p_k, p_x, s);
             return s;
         }
-    }
+    };
     // namespace kmers
 }
 // namespace varoom

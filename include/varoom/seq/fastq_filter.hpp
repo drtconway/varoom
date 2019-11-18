@@ -1,6 +1,8 @@
 #ifndef VAROOM_SEQ_FASTQ_FILTER_HPP
 #define VAROOM_SEQ_FASTQ_FILTER_HPP
 
+#include <functional>
+
 namespace varoom
 {
     namespace seq
@@ -9,9 +11,10 @@ namespace varoom
         class fastq_filter
         {
         public:
-            typedef FastqStream::item_type item_type;
+            typedef typename FastqStream::item_type item_type;
+            typedef typename FastqStream::item_result_type item_result_type;
 
-            fastq_filter(FastqStream& p_src, std::function<bool(const fastq_read&)> p_pred)
+            fastq_filter(FastqStream& p_src, std::function<bool(const item_type&)> p_pred)
                 : m_src(p_src), m_pred(p_pred)
             {
             }
@@ -21,7 +24,7 @@ namespace varoom
                 return m_src.more();
             }
 
-            const item_type& operator*() const
+            item_result_type operator*() const
             {
                 return *m_src;
             }
@@ -43,7 +46,7 @@ namespace varoom
             }
 
             FastqStream& m_src;
-            std::function<bool(const fastq_read&)> m_pred;
+            std::function<bool(const item_type&)> m_pred;
         };
     }
     // namespace seq

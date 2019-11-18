@@ -3,10 +3,12 @@ import testing ;
 
 project : requirements <include>include/ ;
 
-lib boost_test : : <name>boost_unit_test_framework ;
-lib boost_log : : <name>boost_log ;
+lib boost_filesystem : : <name>boost_filesystem ;
+lib boost_system : : <name>boost_system ;
 lib boost_iostreams : : <name>boost_iostreams ;
+lib boost_log : : <name>boost_log ;
 lib boost_program_options : : <name>boost_program_options ;
+lib boost_test : : <name>boost_unit_test_framework ;
 lib pthread : : <name>pthread ;
 lib htslib : : <name>hts ;
 
@@ -20,6 +22,15 @@ exe klbam
       src/klbam/sample_vcf.cpp
       boost_iostreams boost_log boost_program_options
       htslib pthread
+    ;
+
+exe mlstea
+    : src/mlstea.cpp
+      src/mlstea/type.cpp
+      src/mlstea/hist.cpp
+      boost_iostreams boost_log boost_program_options
+      boost_filesystem boost_system
+      pthread
     ;
 
 #exe profile_vcfs
@@ -68,6 +79,10 @@ unit-test test_fasta
 
 unit-test test_fastq
     : tests/seq/test_fastq.cpp boost_test boost_iostreams
+    ;
+
+unit-test test_filter
+    : tests/seq/test_filter.cpp boost_test boost_iostreams
     ;
 
 unit-test test_fastq_pair

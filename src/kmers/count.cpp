@@ -13,8 +13,8 @@ int main(int argc, const char** argv)
 
     const size_t K = 25;
 
-    unordered_map<kmers::kmer,size_t> X;
-    vector<kmers::kmer> xs;
+    unordered_map<kmer,size_t> X;
+    vector<kmer> xs;
 
     input_file_holder_ptr inp = files::in(argv[1]);
     for (fastq_reader r(**inp); r.more(); ++r)

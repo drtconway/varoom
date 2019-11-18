@@ -6,7 +6,7 @@
 #include <fstream>
 
 #define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE fastq tests
+#define BOOST_TEST_MODULE fastq_pair tests
 #include <boost/test/unit_test.hpp>
 
 using namespace std;
@@ -14,15 +14,6 @@ using namespace varoom;
 
 namespace // anonymous
 {
-    std::string compose(std::initializer_list<const char*> p_parts)
-    {
-        std::string s;
-        for (auto i = p_parts.begin(); i != p_parts.end(); ++i)
-        {
-            s.insert(s.size(), *i);
-        }
-        return s;
-    }
 }
 // namespace anonymous
 
