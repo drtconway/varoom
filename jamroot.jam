@@ -65,6 +65,10 @@ unit-test test_kmer_accumulator
     : tests/kmers/test_kmer_accumulator.cpp boost_test
     ;
 
+unit-test test_positional_index
+    : tests/kmers/test_positional_index.cpp boost_test boost_iostreams
+    ;
+
 unit-test test_sam_pileup
     : tests/sam/test_pileup.cpp boost_test
     ;

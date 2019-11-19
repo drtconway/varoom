@@ -145,7 +145,7 @@ namespace varoom
                          std::vector<kmer_and_pos>& p_fwd,
                          std::vector<kmer_and_pos>& p_rev)
         {
-            const kmer M = (1 << (2*p_k)) - 1;
+            const kmer M = (1ULL << (2*p_k)) - 1;
             const size_t S = 2*(p_k - 1);
             p_fwd.clear();
             p_rev.clear();
