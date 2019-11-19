@@ -10,10 +10,14 @@ BOOST_AUTO_TEST_CASE( testGenomic )
     using namespace varoom::hgvs;
 
     genomic_locus g0(12345);
-    BOOST_CHECK_EQUAL(g0(), 12345);
-    hgvsg_locus g1 = static_cast<hgvsg_locus>(g0);
-    BOOST_CHECK_EQUAL(g1(), 12346);
-    genomic_locus g2 = static_cast<genomic_locus>(g1);
-    BOOST_CHECK_EQUAL(g2(), 12345);
+    BOOST_CHECK_EQUAL(static_cast<uint64_t>(g0), 12345);
 
+    hgvsg_locus g1(12345);
+    BOOST_CHECK_EQUAL(static_cast<uint64_t>(g1), 12345);
+
+    tx_position g2(12345);
+    BOOST_CHECK_EQUAL(static_cast<int64_t>(g2), 12345);
+
+    hgvsc_position g3(12345);
+    BOOST_CHECK_EQUAL(static_cast<int64_t>(g3), 12345);
 }
