@@ -54,9 +54,8 @@ namespace varoom
                 }
                 if (g0 >= m_cds_end)
                 {
-                    throw std::runtime_error("downstream UTR not implemented");
-                    //size_t exNo = exon_of(gpos);
-                    //return downstreamUtr(gpos, exNo);
+                    size_t exNo = exon_of(g0);
+                    return downstreamUtr(g0, exNo);
                 }
                 size_t exNo = exon_of(g0);
                 if (contains(m_g_exons[exNo], g0))
@@ -178,6 +177,75 @@ namespace varoom
                             hgvsc_position p(static_cast<int64_t>(t_ex.first - m_t_cds_end) + 1);
                             hgvsc_relative_position r(-d5);
                             return hgvsc_locus(UTR3, p, r);
+                        }
+                        throw std::runtime_error("internal logic error");
+                    }
+                }
+                throw std::runtime_error("internal logic error");
+            }
+
+            hgvsc_locus downstreamUtr(genomic_locus& p_gpos, const size_t p_g_exNo) const
+            {
+                switch (m_strand)
+                {
+                    case POS:
+                    {
+                        size_t t_exNo = gexToTex(p_g_exNo);
+                        const genomic_exon& g_ex = m_g_exons[p_g_exNo];
+                        const tx_exon& t_ex = m_t_exons[t_exNo];
+                        if (contains(m_g_exons[p_g_exNo], p_gpos))
+                        {
+                            int64_t p0 = static_cast<uint64_t>(p_gpos - g_ex.first);
+                            tx_position p1 = t_ex.first - m_t_cds_end + tx_position(p0);
+                            hgvsc_position p(static_cast<int64_t>(p1));
+                            return hgvsc_locus(UTR3, p, hgvsc_relative_position(0));
+                        }
+
+                        // Intronic
+                        if (p_gpos < g_ex.first)
+                        {
+                            uint64_t d3 = static_cast<uint64_t>(g_ex.first - p_gpos);
+                            hgvsc_position p(static_cast<int64_t>(t_ex.first - m_t_cds_end) + 1);
+                            hgvsc_relative_position r(-d3 - 1);
+                            return hgvsc_locus(UTR3, p, r);
+                        }
+                        if (p_gpos >= g_ex.second)
+                        {
+                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second);
+                            hgvsc_position p(static_cast<int64_t>(t_ex.second - m_t_cds_end));
+                            hgvsc_relative_position r(d5);
+                            return hgvsc_locus(UTR3, p, r);
+                        }
+                        throw std::runtime_error("internal logic error");
+                    }
+
+                    case NEG:
+                    {
+                        size_t t_exNo = gexToTex(p_g_exNo);
+                        const genomic_exon& g_ex = m_g_exons[p_g_exNo];
+                        const tx_exon& t_ex = m_t_exons[t_exNo];
+                        if (contains(g_ex, p_gpos))
+                        {
+                            int64_t p0 = static_cast<uint64_t>(g_ex.second - p_gpos);
+                            tx_position p1 = t_ex.first + tx_position(p0);
+                            hgvsc_position p(static_cast<int64_t>(p1));
+                            return hgvsc_locus(UTR5, p, hgvsc_relative_position(0));
+                        }
+
+                        // Intronic
+                        if (p_gpos < g_ex.first)
+                        {
+                            uint64_t d3 = static_cast<uint64_t>(g_ex.first - p_gpos);
+                            hgvsc_position p(static_cast<int64_t>(t_ex.second) - 1);
+                            hgvsc_relative_position r(d3 + 1);
+                            return hgvsc_locus(UTR5, p, r);
+                        }
+                        if (p_gpos >= g_ex.second)
+                        {
+                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second);
+                            hgvsc_position p(static_cast<int64_t>(t_ex.first));
+                            hgvsc_relative_position r(-d5);
+                            return hgvsc_locus(UTR5, p, r);
                         }
                         throw std::runtime_error("internal logic error");
                     }

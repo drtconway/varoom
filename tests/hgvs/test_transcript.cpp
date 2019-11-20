@@ -98,6 +98,26 @@ namespace // anonymous
    "txStart" : 32889616
 })"_json;
 
+    json pbx1 = R"({
+   "accession" : "NM_001204961.1",
+   "cdsEnd" : 164790820,
+   "cdsStart" : 164529059,
+   "chr" : "chr1",
+   "exons" : [
+      [164528596, 164529250],
+      [164532474, 164532548],
+      [164761730, 164761975],
+      [164768935, 164769126],
+      [164776778, 164776914],
+      [164781226, 164781386],
+      [164790773, 164790863],
+      [164815820, 164821067]
+   ],
+   "strand" : "+",
+   "txEnd" : 164821067,
+   "txStart" : 164528596
+})"_json;
+
     transcript make(const json& x)
     {
         tx_strand s = POS;
@@ -168,6 +188,17 @@ BOOST_AUTO_TEST_CASE( testTxPos1 )
         BOOST_CHECK_EQUAL(rp, -110);
         BOOST_CHECK_EQUAL(rr, 0);
     }
+    {
+        // chr2:g.47710151G>C -> NM_000251.2:c.*63G>C
+        genomic_locus g0(47710151);
+        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsc_locus c = tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, UTR3);
+        BOOST_CHECK_EQUAL(rp, 63);
+        BOOST_CHECK_EQUAL(rr, 0);
+    }
 }
 BOOST_AUTO_TEST_CASE( testTxPos2 )
 {
@@ -194,6 +225,34 @@ BOOST_AUTO_TEST_CASE( testTxPos2 )
         BOOST_CHECK_EQUAL(c.zone, UTR5);
         BOOST_CHECK_EQUAL(rp, -39);
         BOOST_CHECK_EQUAL(rr, -167);
+    }
+}
+
+BOOST_AUTO_TEST_CASE( testTxPos3 )
+{
+    // cout << "PBX1" << endl;
+    transcript tx = make(pbx1);
+    {
+        // chr1:g.164790997G>T -> NM_001204961.1:c.*43+134G>T	
+        genomic_locus g0(164790997);
+        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsc_locus c = tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, UTR3);
+        BOOST_CHECK_EQUAL(rp, 43);
+        BOOST_CHECK_EQUAL(rr, 134);
+    }
+    {
+        // chr1:g.164815744A>T	NM_001204961.1:c.*44-77A>T	
+        genomic_locus g0(164815744);
+        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsc_locus c = tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, UTR3);
+        BOOST_CHECK_EQUAL(rp, 44);
+        BOOST_CHECK_EQUAL(rr, -77);
     }
 }
 
@@ -256,25 +315,36 @@ BOOST_AUTO_TEST_CASE( testTxNeg )
         BOOST_CHECK_EQUAL(rp, 5);
         BOOST_CHECK_EQUAL(rr, -206);
     }
-    if (0) {
+    {
+        // chr12:g.25398325C>T -> NM_033360.2:c.-7G>A
+        genomic_locus g0(25398325);
+        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsc_locus c = tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, UTR5);
+        BOOST_CHECK_EQUAL(rp, -7);
+        BOOST_CHECK_EQUAL(rr, 0);
+    }
+    {
         // chr12:g.25398405C>T -> NM_033360.3:c.-11-76G>A	
         genomic_locus g0(25398405);
         hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
-        BOOST_CHECK_EQUAL(c.zone, UTR3);
+        BOOST_CHECK_EQUAL(c.zone, UTR5);
         BOOST_CHECK_EQUAL(rp, -11);
         BOOST_CHECK_EQUAL(rr, -76);
     }
-    if (0) {
+    {
         // chr12:g.25403680del -> NM_033360.3:c.-12+5del
         genomic_locus g0(25403680);
         hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
-        BOOST_CHECK_EQUAL(c.zone, UTR3);
+        BOOST_CHECK_EQUAL(c.zone, UTR5);
         BOOST_CHECK_EQUAL(rp, -12);
         BOOST_CHECK_EQUAL(rr, 5);
     }
