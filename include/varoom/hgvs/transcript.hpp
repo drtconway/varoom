@@ -58,14 +58,7 @@ namespace varoom
                     return downstreamUtr(g0, exNo);
                 }
                 size_t exNo = exon_of(g0);
-                if (contains(m_g_exons[exNo], g0))
-                {
-                    throw std::runtime_error("coding not implemented");
-                    //return coding(g0, exNo);
-                }
-                throw std::runtime_error("intronic not implemented");
-                //return intronic(g0, exNo);
-
+                return internal_to_cds(g0, exNo);
             }
 
             hgvsc_locus intergenic(genomic_locus& p_gpos) const
@@ -78,12 +71,12 @@ namespace varoom
                         {
                             int64_t d = static_cast<uint64_t>(m_tx_begin - p_gpos);
                             tx_position p0 = m_t_exons.front().first - tx_position(d);
-                            hgvsc_position p((static_cast<int64_t>(p0) - 1));
+                            hgvsc_position p(static_cast<int64_t>(p0));
                             return hgvsc_locus(UTR5, p, hgvsc_relative_position(0));
                         }
                         if (p_gpos >= m_tx_end)
                         {
-                            int64_t d = static_cast<uint64_t>(p_gpos - m_tx_end);
+                            int64_t d = static_cast<uint64_t>(p_gpos - m_tx_end) + 1;
                             tx_position p0 = m_t_exons.back().second - m_t_cds_end + tx_position(d);
                             // Because intervals are half-open, we don't need to shift the position.
                             hgvsc_position p(static_cast<int64_t>(p0));
@@ -96,17 +89,16 @@ namespace varoom
                     {
                         if (p_gpos < m_tx_begin)
                         {
-                            int64_t d = static_cast<uint64_t>(m_tx_begin - p_gpos);
+                            int64_t d = static_cast<uint64_t>(m_tx_begin - p_gpos) - 1;
                             tx_position p0 = (m_t_exons.back().second - m_t_cds_end) + tx_position(d);
-                            hgvsc_position p((static_cast<int64_t>(p0) + 1));
+                            hgvsc_position p(static_cast<int64_t>(p0));
                             return hgvsc_locus(UTR3, p, hgvsc_relative_position(0));
                         }
                         if (p_gpos >= m_tx_end)
                         {
-                            int64_t d = static_cast<uint64_t>(p_gpos - m_tx_end);
+                            int64_t d = static_cast<uint64_t>(p_gpos - m_tx_end) + 1;
                             tx_position p0 = m_t_exons.front().first - tx_position(d);
-                            // Because intervals are half-open, we don't need to shift the position.
-                            hgvsc_position p(static_cast<int64_t>(p0));
+                            hgvsc_position p(static_cast<int64_t>(p0) - 1);
                             return hgvsc_locus(UTR5, p, hgvsc_relative_position(0));
                         }
                         throw std::runtime_error("internal logic error");
@@ -124,11 +116,11 @@ namespace varoom
                         size_t t_exNo = gexToTex(p_g_exNo);
                         const genomic_exon& g_ex = m_g_exons[p_g_exNo];
                         const tx_exon& t_ex = m_t_exons[t_exNo];
-                        if (contains(m_g_exons[p_g_exNo], p_gpos))
+                        if (contains(g_ex, p_gpos))
                         {
                             int64_t p0 = static_cast<uint64_t>(p_gpos - g_ex.first);
                             tx_position p1 = t_ex.first + tx_position(p0);
-                            hgvsc_position p(static_cast<int64_t>(p1) - 1);
+                            hgvsc_position p(static_cast<int64_t>(p1));
                             return hgvsc_locus(UTR5, p, hgvsc_relative_position(0));
                         }
 
@@ -137,12 +129,12 @@ namespace varoom
                         {
                             uint64_t d3 = static_cast<uint64_t>(g_ex.first - p_gpos);
                             hgvsc_position p(static_cast<int64_t>(t_ex.first));
-                            hgvsc_relative_position r(-d3 - 1);
+                            hgvsc_relative_position r(-d3);
                             return hgvsc_locus(UTR5, p, r);
                         }
                         if (p_gpos >= g_ex.second)
                         {
-                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second);
+                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second) + 1;
                             hgvsc_position p(static_cast<int64_t>(t_ex.second) - 1);
                             hgvsc_relative_position r(d5);
                             return hgvsc_locus(UTR5, p, r);
@@ -158,8 +150,8 @@ namespace varoom
                         if (contains(g_ex, p_gpos))
                         {
                             int64_t p0 = static_cast<uint64_t>(g_ex.second - p_gpos);
-                            tx_position p1 = t_ex.first + tx_position(p0) - m_t_cds_end;
-                            hgvsc_position p(static_cast<int64_t>(p1) + 1);
+                            tx_position p1 = t_ex.first + tx_position(p0 - 1) - m_t_cds_end;
+                            hgvsc_position p(static_cast<int64_t>(p1));
                             return hgvsc_locus(UTR3, p, hgvsc_relative_position(0));
                         }
 
@@ -167,14 +159,14 @@ namespace varoom
                         if (p_gpos < g_ex.first)
                         {
                             uint64_t d3 = static_cast<uint64_t>(g_ex.first - p_gpos);
-                            hgvsc_position p(static_cast<int64_t>(t_ex.second - m_t_cds_end));
-                            hgvsc_relative_position r(d3 + 1);
+                            hgvsc_position p(static_cast<int64_t>(t_ex.second - m_t_cds_end) - 1);
+                            hgvsc_relative_position r(d3);
                             return hgvsc_locus(UTR3, p, r);
                         }
                         if (p_gpos >= g_ex.second)
                         {
-                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second);
-                            hgvsc_position p(static_cast<int64_t>(t_ex.first - m_t_cds_end) + 1);
+                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second) + 1;
+                            hgvsc_position p(static_cast<int64_t>(t_ex.first - m_t_cds_end));
                             hgvsc_relative_position r(-d5);
                             return hgvsc_locus(UTR3, p, r);
                         }
@@ -197,7 +189,7 @@ namespace varoom
                         {
                             int64_t p0 = static_cast<uint64_t>(p_gpos - g_ex.first);
                             tx_position p1 = t_ex.first - m_t_cds_end + tx_position(p0);
-                            hgvsc_position p(static_cast<int64_t>(p1));
+                            hgvsc_position p(static_cast<int64_t>(p1) + 1);
                             return hgvsc_locus(UTR3, p, hgvsc_relative_position(0));
                         }
 
@@ -206,12 +198,12 @@ namespace varoom
                         {
                             uint64_t d3 = static_cast<uint64_t>(g_ex.first - p_gpos);
                             hgvsc_position p(static_cast<int64_t>(t_ex.first - m_t_cds_end) + 1);
-                            hgvsc_relative_position r(-d3 - 1);
+                            hgvsc_relative_position r(-d3);
                             return hgvsc_locus(UTR3, p, r);
                         }
                         if (p_gpos >= g_ex.second)
                         {
-                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second);
+                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second) + 1;
                             hgvsc_position p(static_cast<int64_t>(t_ex.second - m_t_cds_end));
                             hgvsc_relative_position r(d5);
                             return hgvsc_locus(UTR3, p, r);
@@ -224,26 +216,26 @@ namespace varoom
                         size_t t_exNo = gexToTex(p_g_exNo);
                         const genomic_exon& g_ex = m_g_exons[p_g_exNo];
                         const tx_exon& t_ex = m_t_exons[t_exNo];
-                        if (contains(g_ex, p_gpos))
+                        if (contains_complement(g_ex, p_gpos))
                         {
-                            int64_t p0 = static_cast<uint64_t>(g_ex.second - p_gpos);
+                            int64_t p0 = static_cast<uint64_t>(g_ex.second - p_gpos) - 1;
                             tx_position p1 = t_ex.first + tx_position(p0);
-                            hgvsc_position p(static_cast<int64_t>(p1));
+                            hgvsc_position p(static_cast<int64_t>(p1) - 1);
                             return hgvsc_locus(UTR5, p, hgvsc_relative_position(0));
                         }
 
                         // Intronic
-                        if (p_gpos < g_ex.first)
+                        if (p_gpos <= g_ex.first)
                         {
                             uint64_t d3 = static_cast<uint64_t>(g_ex.first - p_gpos);
-                            hgvsc_position p(static_cast<int64_t>(t_ex.second) - 1);
-                            hgvsc_relative_position r(d3 + 1);
+                            hgvsc_position p(static_cast<int64_t>(t_ex.second) - 2);
+                            hgvsc_relative_position r(d3);
                             return hgvsc_locus(UTR5, p, r);
                         }
-                        if (p_gpos >= g_ex.second)
+                        if (p_gpos > g_ex.second)
                         {
-                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second);
-                            hgvsc_position p(static_cast<int64_t>(t_ex.first));
+                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second) + 1;
+                            hgvsc_position p(static_cast<int64_t>(t_ex.first) - 1);
                             hgvsc_relative_position r(-d5);
                             return hgvsc_locus(UTR5, p, r);
                         }
@@ -253,6 +245,74 @@ namespace varoom
                 throw std::runtime_error("internal logic error");
             }
 
+            hgvsc_locus internal_to_cds(genomic_locus& p_gpos, const size_t p_g_exNo) const
+            {
+                switch (m_strand)
+                {
+                    case POS:
+                    {
+                        size_t t_exNo = gexToTex(p_g_exNo);
+                        const genomic_exon& g_ex = m_g_exons[p_g_exNo];
+                        const tx_exon& t_ex = m_t_exons[t_exNo];
+                        if (contains(g_ex, p_gpos))
+                        {
+                            int64_t p0 = static_cast<uint64_t>(p_gpos - g_ex.first);
+                            tx_position p1 = t_ex.first + tx_position(p0);
+                            hgvsc_position p(static_cast<int64_t>(p1) - 1);
+                            return hgvsc_locus(CODING, p, hgvsc_relative_position(0));
+                        }
+
+                        // Intronic
+                        if (p_gpos < g_ex.first)
+                        {
+                            uint64_t d3 = static_cast<uint64_t>(g_ex.first - p_gpos);
+                            hgvsc_position p(static_cast<int64_t>(t_ex.first) + 1);
+                            hgvsc_relative_position r(-d3);
+                            return hgvsc_locus(INTRON, p, r);
+                        }
+                        if (p_gpos >= g_ex.second)
+                        {
+                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second) + 1;
+                            hgvsc_position p(static_cast<int64_t>(t_ex.second));
+                            hgvsc_relative_position r(d5);
+                            return hgvsc_locus(INTRON, p, r);
+                        }
+                        throw std::runtime_error("internal logic error");
+                    }
+
+                    case NEG:
+                    {
+                        size_t t_exNo = gexToTex(p_g_exNo);
+                        const genomic_exon& g_ex = m_g_exons[p_g_exNo];
+                        const tx_exon& t_ex = m_t_exons[t_exNo];
+                        if (contains_complement(g_ex, p_gpos))
+                        {
+                            int64_t p0 = static_cast<uint64_t>(g_ex.second - p_gpos);
+                            tx_position p1 = t_ex.first + tx_position(p0 - 1);
+                            hgvsc_position p(static_cast<int64_t>(p1));
+                            return hgvsc_locus(CODING, p, hgvsc_relative_position(0));
+                        }
+
+                        // Intronic
+                        if (p_gpos <= g_ex.first)
+                        {
+                            uint64_t d3 = static_cast<uint64_t>(g_ex.first - p_gpos);
+                            hgvsc_position p(static_cast<int64_t>(t_ex.second) - 1);
+                            hgvsc_relative_position r(d3);
+                            return hgvsc_locus(INTRON, p, r);
+                        }
+                        if (p_gpos > g_ex.second)
+                        {
+                            uint64_t d5 = static_cast<uint64_t>(p_gpos - g_ex.second) + 1;
+                            hgvsc_position p(static_cast<int64_t>(t_ex.first));
+                            hgvsc_relative_position r(-d5);
+                            return hgvsc_locus(INTRON, p, r);
+                        }
+                        throw std::runtime_error("internal logic error");
+                    }
+                }
+                throw std::runtime_error("internal logic error");
+            }
             size_t exon_of(const genomic_locus& p_gpos) const
             {
                 for (size_t i = 0; i < m_g_exons.size(); ++i)
@@ -342,8 +402,8 @@ namespace varoom
                     {
                         for (size_t i = 0; i < xs.size(); ++i)
                         {
-                            xs[i].first = te - xs[i].first;
-                            xs[i].second = te - xs[i].second;
+                            xs[i].first = te - xs[i].first + 1;
+                            xs[i].second = te - xs[i].second + 1;
                             std::swap(xs[i].first, xs[i].second);
                         }
                         std::reverse(xs.begin(), xs.end());
@@ -366,6 +426,11 @@ namespace varoom
             static bool contains(const genomic_exon& p_exon, const genomic_locus& p_loc)
             {
                 return p_exon.first <= p_loc && p_loc < p_exon.second;
+            }
+
+            static bool contains_complement(const genomic_exon& p_exon, const genomic_locus& p_loc)
+            {
+                return p_exon.first < p_loc && p_loc <= p_exon.second;
             }
 
             const std::string m_accession;

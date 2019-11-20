@@ -1,5 +1,6 @@
 #include "varoom/hgvs/transcript.hpp"
 
+#include <unordered_map>
 #include <nlohmann/json.hpp>
 
 #define BOOST_TEST_DYN_LINK
@@ -157,8 +158,7 @@ BOOST_AUTO_TEST_CASE( testTxPos1 )
     transcript tx = make(msh2);
     {
         // chr2:g.47630152C>T -> NM_000251.2:c.-179C>T   
-        genomic_locus g0(47630152);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(47630152);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -168,8 +168,7 @@ BOOST_AUTO_TEST_CASE( testTxPos1 )
     }
     {
         // chr2:g.47710431C>G -> NM_000251.2:c.*343C>G	
-        genomic_locus g0(47710431);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(47710431);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -179,8 +178,7 @@ BOOST_AUTO_TEST_CASE( testTxPos1 )
     }
     {
         // chr2:g.47630221G>A -> NM_000251.2:c.-110G>A
-        genomic_locus g0(47630221);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(47630221);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -190,14 +188,40 @@ BOOST_AUTO_TEST_CASE( testTxPos1 )
     }
     {
         // chr2:g.47710151G>C -> NM_000251.2:c.*63G>C
-        genomic_locus g0(47710151);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(47710151);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
         BOOST_CHECK_EQUAL(c.zone, UTR3);
         BOOST_CHECK_EQUAL(rp, 63);
         BOOST_CHECK_EQUAL(rr, 0);
+    }
+    {
+        hgvsg_locus g(47635539);
+        hgvsc_locus c = tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, INTRON);
+        BOOST_CHECK_EQUAL(rp, 212);
+        BOOST_CHECK_EQUAL(rr, -1);
+    }
+    {
+        hgvsg_locus g(47641407);
+        hgvsc_locus c = tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, INTRON);
+        BOOST_CHECK_EQUAL(rp, 793);
+        BOOST_CHECK_EQUAL(rr, -1);
+    }
+    {
+        hgvsg_locus g(47641558);
+        hgvsc_locus c = tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, INTRON);
+        BOOST_CHECK_EQUAL(rp, 942);
+        BOOST_CHECK_EQUAL(rr, 1);
     }
 }
 BOOST_AUTO_TEST_CASE( testTxPos2 )
@@ -206,8 +230,7 @@ BOOST_AUTO_TEST_CASE( testTxPos2 )
     transcript tx = make(brca2);
     {
         // chr13:g.32889968G>A -> NM_000059.3:c.-40+164G>A	
-        genomic_locus g0(32889968);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(32889968);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -217,8 +240,7 @@ BOOST_AUTO_TEST_CASE( testTxPos2 )
     }
     {
         // chr13:g.32890392C>T	NM_000059.3:c.-39-167C>T	
-        genomic_locus g0(32890392);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(32890392);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -234,8 +256,7 @@ BOOST_AUTO_TEST_CASE( testTxPos3 )
     transcript tx = make(pbx1);
     {
         // chr1:g.164790997G>T -> NM_001204961.1:c.*43+134G>T	
-        genomic_locus g0(164790997);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(164790997);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -245,8 +266,7 @@ BOOST_AUTO_TEST_CASE( testTxPos3 )
     }
     {
         // chr1:g.164815744A>T	NM_001204961.1:c.*44-77A>T	
-        genomic_locus g0(164815744);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(164815744);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -262,8 +282,7 @@ BOOST_AUTO_TEST_CASE( testTxNeg )
     transcript tx = make(kras);
     {
         // chr12:g.25403868del -> NM_033360.3:c.-195del
-        genomic_locus g0(25403868);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(25403868);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -273,8 +292,7 @@ BOOST_AUTO_TEST_CASE( testTxNeg )
     }
     {
         // chr12:g.25357720del -> NM_033360.3:c.*5130del
-        genomic_locus g0(25357720);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(25357720);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -284,8 +302,7 @@ BOOST_AUTO_TEST_CASE( testTxNeg )
     }
     {
         // chr12:g.25362777A>G -> NM_033360.3:c.*73T>C
-        genomic_locus g0(25362777);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(25362777);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -295,8 +312,7 @@ BOOST_AUTO_TEST_CASE( testTxNeg )
     }
     {
         // chr12:g.25368206C>T -> NM_033360.3:c.*4+165G>A	
-        genomic_locus g0(25368206);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(25368206);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -306,8 +322,7 @@ BOOST_AUTO_TEST_CASE( testTxNeg )
     }
     {
         // chr12:g.25363051A>C -> NM_033360.2:c.*5-206T>G	
-        genomic_locus g0(25363051);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(25363051);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -317,8 +332,7 @@ BOOST_AUTO_TEST_CASE( testTxNeg )
     }
     {
         // chr12:g.25398325C>T -> NM_033360.2:c.-7G>A
-        genomic_locus g0(25398325);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(25398325);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -328,8 +342,7 @@ BOOST_AUTO_TEST_CASE( testTxNeg )
     }
     {
         // chr12:g.25398405C>T -> NM_033360.3:c.-11-76G>A	
-        genomic_locus g0(25398405);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(25398405);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -339,8 +352,7 @@ BOOST_AUTO_TEST_CASE( testTxNeg )
     }
     {
         // chr12:g.25403680del -> NM_033360.3:c.-12+5del
-        genomic_locus g0(25403680);
-        hgvsg_locus g(static_cast<uint64_t>(g0) + 1);
+        hgvsg_locus g(25403680);
         hgvsc_locus c = tx.to_hgvsc_locus(g);
         int64_t rp = static_cast<int64_t>(c.pos);
         int64_t rr = static_cast<int64_t>(c.rel);
@@ -348,4 +360,118 @@ BOOST_AUTO_TEST_CASE( testTxNeg )
         BOOST_CHECK_EQUAL(rp, -12);
         BOOST_CHECK_EQUAL(rr, 5);
     }
+    {
+        // chr12:g.25398309A>G -> NM_033360.3:c.10T>C
+        hgvsg_locus g(25398309);
+        hgvsc_locus c = tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, CODING);
+        BOOST_CHECK_EQUAL(rp, 10);
+        BOOST_CHECK_EQUAL(rr, 0);
+    }
+    {
+        // chr12:g.25398207C>G -> NM_033360.3:c.111+1G>C	
+        hgvsg_locus g(25398207);
+        hgvsc_locus c = tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, INTRON);
+        BOOST_CHECK_EQUAL(rp, 111);
+        BOOST_CHECK_EQUAL(rr, 1);
+    }
+    {
+        // chr12:g.25380360A>T -> NM_033360.3:c.112-14T>A	
+        hgvsg_locus g(25380360);
+        hgvsc_locus c = tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, INTRON);
+        BOOST_CHECK_EQUAL(rp, 112);
+        BOOST_CHECK_EQUAL(rr, -14);
+    }
 }
+
+BOOST_AUTO_TEST_CASE( testBoundariesPos )
+{
+    return;
+
+    unordered_map<string,tx_zone> Z;
+    Z["coding"] = CODING;
+    Z["intron"] = INTRON;
+    Z["utr3"] = UTR3;
+    Z["utr5"] = UTR5;
+
+    transcript msh2Tx = make(msh2);
+    json msh2Tests = R"([
+        [47635539, "intron", 212, -1],
+        [47641407, "intron", 793, -1],
+        [47641558, "intron", 942, 1],
+        [47672686, "intron", 1277, -1]
+    ])"_json;
+
+    for (size_t i = 0; i < msh2Tests.size(); ++i)
+    {
+        uint64_t gj = msh2Tests[i][0];
+        string zj = msh2Tests[i][1];
+        int64_t pj = msh2Tests[i][2];
+        int64_t rj = msh2Tests[i][3];
+
+        hgvsg_locus g(gj);
+        hgvsc_locus c = msh2Tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, Z[zj]);
+        BOOST_CHECK_EQUAL(rp, pj);
+        BOOST_CHECK_EQUAL(rr, rj);
+    }
+
+    transcript brca2Tx = make(brca2);
+    json brca2Tests = R"([
+        [32890665, "intron", 67, 1],
+        [32893213, "intron", 68, -1],
+        [32900288, "intron", 475, 1],
+        [32972298, "intron", 9649, -1]
+    ])"_json;
+
+    for (size_t i = 0; i < brca2Tests.size(); ++i)
+    {
+        uint64_t gj = brca2Tests[i][0];
+        string zj = brca2Tests[i][1];
+        int64_t pj = brca2Tests[i][2];
+        int64_t rj = brca2Tests[i][3];
+
+        hgvsg_locus g(gj);
+        hgvsc_locus c = brca2Tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, Z[zj]);
+        BOOST_CHECK_EQUAL(rp, pj);
+        BOOST_CHECK_EQUAL(rr, rj);
+    }
+
+    transcript pbx1Tx = make(pbx1);
+    json pbx1Tests = R"([
+        [164529251, "intron", 191, 1],
+        [164532474, "intron", 192, -1],
+        [164790864, "utr3", 43, 1],
+        [164815820,  "utr3", 44, -1]
+    ])"_json;
+
+    for (size_t i = 0; i < pbx1Tests.size(); ++i)
+    {
+        uint64_t gj = pbx1Tests[i][0];
+        string zj = pbx1Tests[i][1];
+        int64_t pj = pbx1Tests[i][2];
+        int64_t rj = pbx1Tests[i][3];
+
+        hgvsg_locus g(gj);
+        hgvsc_locus c = pbx1Tx.to_hgvsc_locus(g);
+        int64_t rp = static_cast<int64_t>(c.pos);
+        int64_t rr = static_cast<int64_t>(c.rel);
+        BOOST_CHECK_EQUAL(c.zone, Z[zj]);
+        BOOST_CHECK_EQUAL(rp, pj);
+        BOOST_CHECK_EQUAL(rr, rj);
+    }
+}
+
