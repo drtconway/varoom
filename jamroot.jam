@@ -12,6 +12,14 @@ lib boost_test : : <name>boost_unit_test_framework ;
 lib pthread : : <name>pthread ;
 lib htslib : : <name>hts ;
 
+exe ighloo
+    : src/ighloo.cpp
+      src/ighloo/scan.cpp
+      boost_iostreams boost_log boost_program_options
+      boost_filesystem boost_system
+      pthread
+    ;
+
 exe klbam
     : src/klbam.cpp
       src/klbam/count_bases.cpp
@@ -53,12 +61,16 @@ unit-test test_kmers
     : tests/test_kmers.cpp boost_test
     ;
 
+unit-test test_hgvsg_parser
+    : tests/hgvs/test_hgvsg_parser.cpp boost_test
+    ;
+
 unit-test test_hgvs_positions
     : tests/hgvs/test_hgvs_positions.cpp boost_test
     ;
 
-unit-test test_hgvsg_parser
-    : tests/hgvs/test_hgvsg_parser.cpp boost_test
+unit-test test_transcript
+    : tests/hgvs/test_transcript.cpp boost_test
     ;
 
 unit-test test_kmer_accumulator

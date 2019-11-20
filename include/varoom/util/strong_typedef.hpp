@@ -141,7 +141,35 @@ namespace varoom
     };
 
     template <class ST>
-    struct integer_arithmetic : addition<ST>, subtraction<ST>, multiplication<ST>, division<ST>, modulo<ST>
+    struct comparable
+    {
+        friend bool operator<(const ST& lhs, const ST& rhs)
+        {
+            using type = underlying_type<ST>;
+            return (static_cast<const type&>(lhs) < static_cast<const type&>(rhs));
+        }
+
+        friend bool operator<=(const ST& lhs, const ST& rhs)
+        {
+            using type = underlying_type<ST>;
+            return (static_cast<const type&>(lhs) <= static_cast<const type&>(rhs));
+        }
+
+        friend bool operator>=(const ST& lhs, const ST& rhs)
+        {
+            using type = underlying_type<ST>;
+            return (static_cast<const type&>(lhs) >= static_cast<const type&>(rhs));
+        }
+
+        friend bool operator>(const ST& lhs, const ST& rhs)
+        {
+            using type = underlying_type<ST>;
+            return (static_cast<const type&>(lhs) > static_cast<const type&>(rhs));
+        }
+    };
+
+    template <class ST>
+    struct integer_arithmetic : addition<ST>, subtraction<ST>, multiplication<ST>, division<ST>, modulo<ST>, comparable<ST>
     {
     };
 

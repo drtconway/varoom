@@ -46,6 +46,17 @@ namespace varoom
             return n;
         }
 
+        const std::string& label(const seq_num& p_n) const
+        {
+            static std::string unk("<unlabeled>");
+            auto i = m_label_index.find(p_n);
+            if (i == m_label_index.end())
+            {
+                return unk;
+            }
+            return i->second;
+        }
+
         bool hits(const std::vector<kmer_and_pos>& p_xs, std::unordered_map<seq_num, std::unordered_map<seq_pos,size_t>>& p_res) const
         {
             std::vector<seq_num_and_pos> hx;
