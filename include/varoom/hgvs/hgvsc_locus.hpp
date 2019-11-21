@@ -29,6 +29,11 @@ namespace varoom
             {
             }
 
+            bool operator==(const hgvsc_locus& p_other) const
+            {
+                return zone == p_other.zone && pos == p_other.pos && rel == p_other.rel;
+            }
+
             std::string str() const
             {
                 switch (zone)

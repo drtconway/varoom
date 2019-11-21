@@ -155,6 +155,12 @@ namespace varoom
             return (static_cast<const type&>(lhs) <= static_cast<const type&>(rhs));
         }
 
+        friend bool operator==(const ST& lhs, const ST& rhs)
+        {
+            using type = underlying_type<ST>;
+            return (static_cast<const type&>(lhs) == static_cast<const type&>(rhs));
+        }
+
         friend bool operator>=(const ST& lhs, const ST& rhs)
         {
             using type = underlying_type<ST>;

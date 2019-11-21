@@ -61,6 +61,10 @@ unit-test test_kmers
     : tests/test_kmers.cpp boost_test
     ;
 
+unit-test test_hgvsc_formatter
+    : tests/hgvs/test_hgvsc_formatter.cpp boost_test
+    ;
+
 unit-test test_hgvsc_locus
     : tests/hgvs/test_hgvsc_locus.cpp boost_test
     ;
