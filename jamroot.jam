@@ -12,13 +12,13 @@ lib boost_test : : <name>boost_unit_test_framework ;
 lib pthread : : <name>pthread ;
 lib htslib : : <name>hts ;
 
-exe ighloo
-    : src/ighloo.cpp
-      src/ighloo/scan.cpp
-      boost_iostreams boost_log boost_program_options
-      boost_filesystem boost_system
-      pthread
-    ;
+#exe ighloo
+#    : src/ighloo.cpp
+#      src/ighloo/scan.cpp
+#      boost_iostreams boost_log boost_program_options
+#      boost_filesystem boost_system
+#      pthread
+#    ;
 
 exe klbam
     : src/klbam.cpp
