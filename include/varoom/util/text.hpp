@@ -1,6 +1,10 @@
 #ifndef VAROOM_UTIL_TEXT_HPP
 #define VAROOM_UTIL_TEXT_HPP
 
+#ifndef VAROOM_UTIL_SUBTEXT_HPP
+#include "varoom/util/subtext.hpp"
+#endif
+
 #include <initializer_list>
 
 namespace varoom
@@ -36,6 +40,24 @@ namespace varoom
             return p_str.size() > 0 && p_str.front() == p_ch;
         }
 
+        static bool starts_with(const subtext& p_str, char p_ch)
+        {
+            return p_str.first != p_str.second && *(p_str.first) == p_ch;
+        }
+
+        static bool starts_with(const std::string& p_str, const char* p_prefix)
+        {
+            const char* ptr = p_prefix;
+            for (auto itr = p_str.begin(); itr != p_str.end() && *ptr != '\0'; ++itr, ++ptr)
+            {
+                if (*itr != *ptr)
+                {
+                    return false;
+                }
+            }
+            return (*ptr == '\0');
+        }
+
         static bool starts_with(const std::string& p_str, const std::string& p_prefix)
         {
             auto s = p_str.begin();
@@ -50,6 +72,11 @@ namespace varoom
                 ++t;
             }
             return t == p_prefix.end();
+        }
+
+        static bool ends_with(const subtext& p_str, char p_ch)
+        {
+            return p_str.first != p_str.second && *(p_str.second - 1) == p_ch;
         }
 
         static bool ends_with(const std::string& p_str, const std::string& p_suffix)

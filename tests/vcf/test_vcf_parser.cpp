@@ -1,6 +1,7 @@
 #include "varoom/vcf/vcf_parser.hpp"
 
 #include <fstream>
+#include <sstream>
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE vcf_parser tests
@@ -8,12 +9,52 @@
 
 namespace // anonymous
 {
-    class vcf_tester : public varoom::vcf::vcf_handler
+    typedef std::function<void (const std::string&, const std::int64_t&, const std::string&, const std::string&,
+                                const std::string&, const double&, const std::string&,
+                                const varoom::lazy<varoom::vcf::vcf_info>&,
+                                const varoom::lazy<std::vector<varoom::vcf::vcf_info>>&)> variant_func;
+
+    class simple_tester : public varoom::vcf::vcf_handler
+    {
+    public:
+        simple_tester(std::function<void(const std::string&,const std::string&)> p_meta1,
+                      std::function<void(const std::string&,const std::vector<varoom::vcf::key_value_pair>&)> p_meta2,
+                      variant_func p_var)
+            : m_meta1(p_meta1), m_meta2(p_meta2), m_var(p_var)
+        {
+        }
+
+        virtual void meta(const std::string& p_key, const std::string& p_value)
+        {
+            m_meta1(p_key, p_value);
+        }
+
+        virtual void meta(const std::string& p_kind, const std::vector<varoom::vcf::key_value_pair>& p_info)
+        {
+            m_meta2(p_kind, p_info);
+        }
+
+        virtual void operator()(const std::string& p_chr, const std::int64_t& p_pos,
+                                const std::string& p_id, const std::string& p_ref, const std::string& p_alt,
+                                const double& p_qual, const std::string& p_filter,
+                                const varoom::lazy<varoom::vcf::vcf_info>& p_info,
+                                const varoom::lazy<std::vector<varoom::vcf::vcf_info>>& p_genotypes)
+        {
+            m_var(p_chr, p_pos, p_id, p_ref, p_alt, p_qual, p_filter, p_info, p_genotypes);
+        }
+
+    private:
+        std::function<void(const std::string&,const std::string&)> m_meta1;
+        std::function<void(const std::string&,const std::vector<varoom::vcf::key_value_pair>&)> m_meta2;
+        variant_func m_var;
+    };
+
+    class big_tester : public varoom::vcf::vcf_handler
     {
     public:
         std::vector<int64_t> positions;
         int64_t ind;
-        vcf_tester()
+        big_tester()
             : positions({
                 891407, 897788, 1289599, 1361641, 1430870, 1569967, 1720700, 3732103,
                 6314644, 9816594, 13695769, 15844676, 16064514, 17083823, 17322657,
@@ -232,14 +273,45 @@ namespace // anonymous
 }
 // namespace anonymous
 
-BOOST_AUTO_TEST_CASE( test1 )
+BOOST_AUTO_TEST_CASE( testMeta2 )
+{
+    using namespace std;
+    using namespace varoom::vcf;
+
+    const string vcf_text = R"(#
+##ALT=<ID=NON_REF,Description="Represents any possible alternative allele at this location">
+)";
+    istringstream in(vcf_text);
+
+    simple_tester T([&](const string& p_key, const string& p_value) {
+        BOOST_TEST(false);
+    }, [&](const string& p_kind, const vector<key_value_pair>& p_kvs) {
+        BOOST_CHECK_EQUAL(p_kind, "ALT");
+        BOOST_REQUIRE_EQUAL(p_kvs.size(), 2);
+        BOOST_CHECK_EQUAL(p_kvs[0].first, "ID");
+        BOOST_CHECK_EQUAL(p_kvs[0].second, "NON_REF");
+        BOOST_CHECK_EQUAL(p_kvs[1].first, "Description");
+        BOOST_CHECK_EQUAL(p_kvs[1].second, "Represents any possible alternative allele at this location");
+    }, [&](const string& p_chr, const int64_t& p_pos,
+           const string& p_id, const string& p_ref,
+           const string& p_alt, const double& p_qual, const string& p_filter,
+           const varoom::lazy<varoom::vcf::vcf_info>& p_info,
+           const varoom::lazy<vector<varoom::vcf::vcf_info>>& p_genotypes) {
+        BOOST_TEST(false);
+    });
+
+    vcf_parser P(T);
+    P.parse(in);
+}
+
+BOOST_AUTO_TEST_CASE( testFile )
 {
     using namespace std;
     using namespace varoom::vcf;
 
     ifstream in("tests/data/exac-few.vcf");
 
-    vcf_tester T;
+    big_tester T;
     vcf_parser P(T);
     P.parse(in);
 }

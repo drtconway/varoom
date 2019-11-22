@@ -5,12 +5,98 @@
 #include "varoom/vcf/vcf_handler.hpp"
 #endif
 
+#ifndef VAROOM_UTIL_TEXT_HPP
+#include "varoom/util/text.hpp"
+#endif
+
 #include <iostream>
 
 namespace varoom
 {
     namespace vcf
     {
+        namespace detail
+        {
+            enum tok_kind { WORD, EQ, COMMA, STR };
+            struct tok
+            {
+                tok_kind kind;
+                std::string value;
+
+                tok(tok_kind p_kind)
+                    : kind(p_kind)
+                {
+                }
+
+                tok(tok_kind p_kind, const std::string& p_value)
+                    : kind(p_kind), value(p_value)
+                {
+                }
+
+                static bool scanner(const subtext& p_txt, std::vector<tok>& p_toks)
+                {
+                    auto cur = p_txt.first;
+                    while (cur != p_txt.second)
+                    {
+                        char c = *cur;
+                        switch (c)
+                        {
+                            case '=':
+                            {
+                                p_toks.push_back(tok(detail::EQ));
+                                ++cur;
+                                break;
+                            }
+                            case ',':
+                            {
+                                p_toks.push_back(tok(detail::COMMA));
+                                ++cur;
+                                break;
+                            }
+                            case '"':
+                            {
+                                std::string str;
+                                ++cur;
+                                while (cur != p_txt.second && *cur != '"')
+                                {
+                                    if (*cur == '\\')
+                                    {
+                                        ++cur;
+                                        if (cur == p_txt.second)
+                                        {
+                                            return false;
+                                        }
+                                    }
+                                    str.push_back(*cur);
+                                    ++cur;
+                                }
+                                if (cur == p_txt.second)
+                                {
+                                    return false;
+                                }
+                                ++cur;
+                                p_toks.push_back(tok(detail::STR, str));
+                                break;
+                            }
+                            default:
+                            {
+                                std::string val;
+                                while (cur != p_txt.second && *cur != '"' && *cur != ',' && *cur != '=')
+                                {
+                                    val.push_back(*cur);
+                                    ++cur;
+                                }
+                                p_toks.push_back(tok(detail::WORD, val));
+                                break;
+                            }
+                        }
+                    }
+                    return true;
+                }
+            };
+        }
+        // namespace detail
+
         class vcf_parser
         {
         public:
@@ -36,7 +122,12 @@ namespace varoom
                 while (std::getline(p_in, l))
                 {
                     ++line_no;
-                    if (starts_with(l, '#'))
+                    if (text::starts_with(l, "##"))
+                    {
+                        parse_meta(l);
+                        continue;
+                    }
+                    if (text::starts_with(l, '#'))
                     {
                         continue;
                     }
@@ -78,9 +169,88 @@ namespace varoom
             }
 
         private:
-            static bool starts_with(const std::string& p_str, char p_ch)
+            void parse_meta(const std::string& p_line)
             {
-                return p_str.size() > 0 && p_str.front() == p_ch;
+                std::vector<subtext> parts;
+                // Skip over the ##
+                subtext ll(p_line.begin() + 2, p_line.end());
+                ll.split('=', parts);
+
+                if (parts.size() < 2)
+                {
+                    return;
+                }
+
+                subtext kind = parts[0];
+                subtext value = subtext(parts[1].first, parts.back().second);
+
+                if (text::starts_with(value, '<') && text::ends_with(value, '>'))
+                {
+                    value.first += 1;
+                    value.second -= 1;
+                    std::vector<key_value_pair> kvs;
+                    if (!parse_key_value_pairs(value, kvs))
+                    {
+                        m_handler.meta(kind, value);
+                    }
+                    m_handler.meta(kind, kvs);
+                }
+                else
+                {
+                    m_handler.meta(kind, value);
+                }
+            }
+
+            static bool parse_key_value_pairs(const subtext& p_str, std::vector<key_value_pair>& p_kvs)
+            {
+                std::vector<detail::tok> toks;
+                if (!detail::tok::scanner(p_str, toks))
+                {
+                    return false;
+                }
+                size_t i = 0;
+                while (i < toks.size())
+                {
+                    key_value_pair kv;
+                    if (toks[i].kind != detail::WORD)
+                    {
+                        return false;
+                    }
+                    kv.first = toks[i].value;
+                    ++i;
+                    if (i == toks.size())
+                    {
+                        return false;
+                    }
+                    if (toks[i].kind == detail::COMMA)
+                    {
+                        p_kvs.push_back(kv);
+                        ++i;
+                        continue;
+                    }
+                    if (toks[i].kind != detail::EQ)
+                    {
+                        return false;
+                    }
+                    ++i;
+                    if (i == toks.size() || (toks[i].kind != detail::WORD && toks[i].kind != detail::STR))
+                    {
+                        return false;
+                    }
+                    kv.second = toks[i].value;
+                    p_kvs.push_back(kv);
+                    ++i;
+                    if (i == toks.size())
+                    {
+                        continue;
+                    }
+                    if (toks[i].kind != detail::COMMA)
+                    {
+                        return false;
+                    }
+                    ++i;
+                }
+                return true;
             }
 
             vcf_handler& m_handler;

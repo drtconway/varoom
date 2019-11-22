@@ -70,12 +70,12 @@ namespace varoom
             }
         }
 
-    private:
-
         std::string::const_iterator find(char p_x) const
         {
             return find(first, p_x);
         }
+
+    private:
 
         std::string::const_iterator find(const std::string::const_iterator& p_from, char p_x) const
         {
