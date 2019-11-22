@@ -27,6 +27,11 @@ namespace varoom
             return second - first;
         }
 
+        char operator[](const size_t& p_idx) const
+        {
+            return *(first + p_idx);
+        }
+
         bool operator==(const std::string& p_other) const
         {
             return *this == subtext(p_other.begin(), p_other.end());

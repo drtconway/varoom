@@ -85,6 +85,10 @@ unit-test test_transcript
     : tests/hgvs/test_transcript.cpp boost_test
     ;
 
+unit-test test_vcf_to_hgvsg
+    : tests/hgvs/test_vcf_to_hgvsg.cpp boost_test
+    ;
+
 unit-test test_kmer_accumulator
     : tests/kmers/test_kmer_accumulator.cpp boost_test
     ;
