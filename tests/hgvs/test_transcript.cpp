@@ -1,7 +1,6 @@
 #include "varoom/hgvs/transcript.hpp"
 
 #include <unordered_map>
-#include <nlohmann/json.hpp>
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE hgvs_positions tests
@@ -119,43 +118,13 @@ namespace // anonymous
    "txStart" : 164528596
 })"_json;
 
-    transcript make(const json& x)
-    {
-        tx_strand s = POS;
-        if (x["strand"] == "-")
-        {
-            s = NEG;
-        }
-        string acc = x["accession"];
-        string chr = x["chr"];
-        uint64_t tss = x["txStart"];
-        uint64_t tse = x["txEnd"];
-        uint64_t cdss = x["cdsStart"];
-        uint64_t cdse = x["cdsEnd"];
-
-        genomic_locus txStart(tss);
-        genomic_locus txEnd(tse);
-        genomic_locus cdsStart(cdss);
-        genomic_locus cdsEnd(cdse);
-
-        vector<genomic_exon> exons;
-        for (size_t i = 0; i < x["exons"].size(); ++i)
-        {
-            const json& y = x["exons"][i];
-            uint64_t exs = y[0];
-            uint64_t exe = y[1];
-            exons.push_back(genomic_exon(genomic_locus(exs), genomic_locus(exe)));
-        }
-        return transcript(acc, chr, s, txStart, txEnd, cdsStart, cdsEnd, exons);
-    }
-
 }
 // namespace anonymous
 
 BOOST_AUTO_TEST_CASE( testTxPos1 )
 {
     // cout << "MSH2" << endl;
-    transcript tx = make(msh2);
+    transcript tx = transcript::make(msh2);
     {
         // chr2:g.47630152C>T -> NM_000251.2:c.-179C>T   
         hgvsg_locus g(47630152);
@@ -227,7 +196,7 @@ BOOST_AUTO_TEST_CASE( testTxPos1 )
 BOOST_AUTO_TEST_CASE( testTxPos2 )
 {
     // cout << "BRCA2" << endl;
-    transcript tx = make(brca2);
+    transcript tx = transcript::make(brca2);
     {
         // chr13:g.32889968G>A -> NM_000059.3:c.-40+164G>A	
         hgvsg_locus g(32889968);
@@ -253,7 +222,7 @@ BOOST_AUTO_TEST_CASE( testTxPos2 )
 BOOST_AUTO_TEST_CASE( testTxPos3 )
 {
     // cout << "PBX1" << endl;
-    transcript tx = make(pbx1);
+    transcript tx = transcript::make(pbx1);
     {
         // chr1:g.164790997G>T -> NM_001204961.1:c.*43+134G>T	
         hgvsg_locus g(164790997);
@@ -279,7 +248,7 @@ BOOST_AUTO_TEST_CASE( testTxPos3 )
 BOOST_AUTO_TEST_CASE( testTxNeg )
 {
     // cout << "KRAS" << endl;
-    transcript tx = make(kras);
+    transcript tx = transcript::make(kras);
     {
         // chr12:g.25403868del -> NM_033360.3:c.-195del
         hgvsg_locus g(25403868);
@@ -402,7 +371,7 @@ BOOST_AUTO_TEST_CASE( testBoundariesPos )
     Z["utr3"] = UTR3;
     Z["utr5"] = UTR5;
 
-    transcript msh2Tx = make(msh2);
+    transcript msh2Tx = transcript::make(msh2);
     json msh2Tests = R"([
         [47635539, "intron", 212, -1],
         [47641407, "intron", 793, -1],
@@ -426,7 +395,7 @@ BOOST_AUTO_TEST_CASE( testBoundariesPos )
         BOOST_CHECK_EQUAL(rr, rj);
     }
 
-    transcript brca2Tx = make(brca2);
+    transcript brca2Tx = transcript::make(brca2);
     json brca2Tests = R"([
         [32890665, "intron", 67, 1],
         [32893213, "intron", 68, -1],
@@ -450,7 +419,7 @@ BOOST_AUTO_TEST_CASE( testBoundariesPos )
         BOOST_CHECK_EQUAL(rr, rj);
     }
 
-    transcript pbx1Tx = make(pbx1);
+    transcript pbx1Tx = transcript::make(pbx1);
     json pbx1Tests = R"([
         [164529251, "intron", 191, 1],
         [164532474, "intron", 192, -1],

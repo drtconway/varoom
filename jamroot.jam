@@ -85,6 +85,10 @@ unit-test test_transcript
     : tests/hgvs/test_transcript.cpp boost_test
     ;
 
+unit-test test_transcript_index
+    : tests/hgvs/test_transcript_index.cpp boost_test
+    ;
+
 unit-test test_vcf_to_hgvsg
     : tests/hgvs/test_vcf_to_hgvsg.cpp boost_test
     ;

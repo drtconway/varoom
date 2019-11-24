@@ -9,9 +9,14 @@
 #include "varoom/hgvs/hgvsc_locus.hpp"
 #endif
 
+#ifndef VAROOM_SEQ_UTILITY_HPP
+#include "varoom/seq/utility.hpp"
+#endif
+
 #include <algorithm>
 #include <iostream>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 namespace varoom
 {
@@ -39,6 +44,70 @@ namespace varoom
                   make_t_exons();
             }
 
+            static transcript make(const nlohmann::json& x)
+            {
+                tx_strand s = POS;
+                if (x["strand"] == "-")
+                {
+                    s = NEG;
+                }
+                std::string acc = x["accession"];
+                std::string chr = x["chr"];
+                uint64_t tss = x["txStart"];
+                uint64_t tse = x["txEnd"];
+                uint64_t cdss = x["cdsStart"];
+                uint64_t cdse = x["cdsEnd"];
+
+                genomic_locus txStart(tss);
+                genomic_locus txEnd(tse);
+                genomic_locus cdsStart(cdss);
+                genomic_locus cdsEnd(cdse);
+
+                std::vector<genomic_exon> exons;
+                for (size_t i = 0; i < x["exons"].size(); ++i)
+                {
+                    const nlohmann::json& y = x["exons"][i];
+                    uint64_t exs = y[0];
+                    uint64_t exe = y[1];
+                    exons.push_back(genomic_exon(genomic_locus(exs), genomic_locus(exe)));
+                }
+                return transcript(acc, chr, s, txStart, txEnd, cdsStart, cdsEnd, exons);
+            }
+
+            const std::string& accession() const
+            {
+                return m_accession;
+            }
+
+            const std::string& chr() const
+            {
+                return m_chr;
+            }
+
+            const genomic_locus& tx_begin() const
+            {
+                return m_tx_begin;
+            }
+
+            const genomic_locus& tx_end() const
+            {
+                return m_tx_end;
+            }
+
+            std::pair<hgvsc_locus,hgvsc_locus> to_hgvsc_locus(const std::pair<hgvsg_locus,hgvsg_locus>& p_gpair) const
+            {
+                hgvsc_locus lhs = to_hgvsc_locus(p_gpair.first);
+                hgvsc_locus rhs = to_hgvsc_locus(p_gpair.second);
+                if (m_strand == POS)
+                {
+                    return std::pair<hgvsc_locus,hgvsc_locus>(lhs, rhs);
+                }
+                else
+                {
+                    return std::pair<hgvsc_locus,hgvsc_locus>(rhs, lhs);
+                }
+            }
+
             hgvsc_locus to_hgvsc_locus(const hgvsg_locus& p_gpos) const
             {
                 genomic_locus g0(static_cast<uint64_t>(p_gpos) - 1);
@@ -60,6 +129,22 @@ namespace varoom
                 size_t exNo = exon_of(g0);
                 return internal_to_cds(g0, exNo);
             }
+
+            std::string to_strand(const std::string& p_seq) const
+            {
+                if (m_strand == POS)
+                {
+                    return p_seq;
+                }
+                else
+                {
+                    std::string res;
+                    varoom::seq::utility::reverse_complement(p_seq, res);
+                    return res;
+                }
+            }
+
+        private:
 
             hgvsc_locus intergenic(genomic_locus& p_gpos) const
             {
@@ -313,6 +398,7 @@ namespace varoom
                 }
                 throw std::runtime_error("internal logic error");
             }
+
             size_t exon_of(const genomic_locus& p_gpos) const
             {
                 for (size_t i = 0; i < m_g_exons.size(); ++i)
@@ -353,8 +439,6 @@ namespace varoom
                     return m_g_exons.size() - p_g_exNo - 1;
                 }
             }
-
-        private:
 
             void make_t_exons()
             {

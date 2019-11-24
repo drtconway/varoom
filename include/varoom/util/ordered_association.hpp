@@ -64,6 +64,7 @@ namespace varoom
         }
 
     private:
+
         int find(const std::string& p_key) const
         {
             for (size_t i = 0; i < m_keys.size(); ++i)
