@@ -165,6 +165,16 @@ namespace // anonymous
                     ++sItr;
                 }
 
+                // Finally, to account for the fact that coverage variation
+                // does represent real variablility, we include a "null"
+                // observation category with a global count of 1 and  a
+                // sample count of 1. This vastly reduces the probability
+                // of all samples having the same KL-divergence which leads
+                // to problems estimating gamma.
+                //
+                gProbs.push_back(1);
+                sProbs.push_back(1);
+
                 double gTot = 0;
                 double sTot = 0;
                 for (size_t i = 0; i < gProbs.size(); ++i)
