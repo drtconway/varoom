@@ -30,6 +30,6 @@ BOOST_AUTO_TEST_CASE( testFile )
     P.parse(in);
     for (size_t i = 0; i < hgvsgs.size(); ++i)
     {
-        cout << i << '\t' << hgvsgs[i] << endl;
+        //cout << i << '\t' << hgvsgs[i] << endl;
     }
 }

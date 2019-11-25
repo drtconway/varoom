@@ -54,6 +54,16 @@ namespace // anonymous
                     locus loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
                     double kld = any_cast<double>(r[7]);
                     klds[loc].push_back(kld);
+                    pair<double,double> est = klds[loc]();
+                    if (!std::isnormal(est.first) || !std::isnormal(est.second))
+                    {
+                        cerr << m_input_filenames[n]
+                             << '\t' << loc.first
+                             << '\t' << loc.second
+                             << '\t' << est.first
+                             << '\t' << est.second
+                             << endl;
+                    }
                 }
             }
 
