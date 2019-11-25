@@ -133,6 +133,10 @@ unit-test test_codec8
     : tests/util/test_codec8.cpp boost_test
     ;
 
+unit-test test_gamma_estimator
+    : tests/util/test_gamma_estimator.cpp boost_test
+    ;
+
 unit-test test_lazy
     : tests/util/test_lazy.cpp boost_test
     ;
