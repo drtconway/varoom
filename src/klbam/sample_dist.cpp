@@ -1,7 +1,7 @@
 #include "varoom/command.hpp"
-#include "varoom/util/typed_tsv.hpp"
 #include "varoom/util/files.hpp"
 #include "varoom/util/text.hpp"
+#include "varoom/util/typed_tsv.hpp"
 
 #include <cmath>
 #include <initializer_list>
@@ -190,8 +190,22 @@ namespace // anonymous
 
                 double kld = kl_divergence(sProbs, gProbs);
                 output_row(out, sRow, kld);
+
                 ++glob;
+                if (glob.more())
+                {
+                    const typed_tsv_row& gRow = *glob;
+                    gLoc.first = any_cast<const string&>(gRow[0]);
+                    gLoc.second = any_cast<uint64_t>(gRow[1]);
+                }
+
                 ++sample;
+                if (sample.more())
+                {
+                    const typed_tsv_row& sRow = *sample;
+                    sLoc.first = any_cast<const string&>(sRow[0]);
+                    sLoc.second = any_cast<uint64_t>(sRow[1]);
+                }
             }
 
             while (sample.more())
