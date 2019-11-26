@@ -172,8 +172,8 @@ namespace // anonymous
                 // of all samples having the same KL-divergence which leads
                 // to problems estimating gamma.
                 //
-                gProbs.push_back(1);
-                sProbs.push_back(1);
+                //gProbs.push_back(1);
+                //sProbs.push_back(1);
 
                 double gTot = 0;
                 double sTot = 0;
