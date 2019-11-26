@@ -7,6 +7,7 @@
 #include "varoom/util/typed_tsv.hpp"
 
 #include <initializer_list>
+#include <tuple>
 
 using namespace std;
 using namespace boost;
@@ -96,11 +97,12 @@ namespace // anonymous
 
     typedef pair<string,size_t> seq_and_count;
     typedef vector<seq_and_count> seq_and_count_list;
+    typedef tuple<string,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,string> counts_row;
 
     class pileup_holder : public varoom::sam_pileup
     {
     public:
-        pileup_holder(ostream& p_out, const regions& p_reg)
+        pileup_holder(vector<counts_row>& p_out, const regions& p_reg)
             : chr("<unknown>"), pos(0), out(p_out), reg(p_reg), ind(*tsv_column_type::get("[str=uint]"))
         {
         }
@@ -161,15 +163,8 @@ namespace // anonymous
             }
 
             ind.unmake(tsv_column_value(nOther), other);
-
-            out << chr
-                << '\t' << pos
-                << '\t' << nA
-                << '\t' << nC
-                << '\t' << nG
-                << '\t' << nT
-                << '\t' << other
-                << endl;
+            counts_row row(chr, pos, nA, nC, nG, nT, other);
+            out.push_back(row);
 
             chr = p_chr;
             pos = p_pos;
@@ -179,7 +174,7 @@ namespace // anonymous
 
         string chr;
         uint32_t pos;
-        ostream& out;
+        vector<counts_row>& out;
         const regions& reg;
         const tsv_column_type& ind;
         map<string,size_t> counts;
@@ -230,11 +225,8 @@ namespace // anonymous
                 use_sam = false;
             }
             
-            output_file_holder_ptr outp = files::out(m_output_filename);
-            ostream& out = **outp;
-            out << text::tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
-
-            pileup_holder ph(out, m_regions);
+            vector<counts_row> rows;
+            pileup_holder ph(rows, m_regions);
             if (use_sam)
             {
                 input_file_holder_ptr inp = files::in(m_input_filename);
@@ -260,6 +252,30 @@ namespace // anonymous
                     ph.add_alignment(aln.chr, aln.pos, aln.seq, aln.cigar);
                 }
             }
+
+            std::sort(rows.begin(), rows.end());
+            output_file_holder_ptr outp = files::out(m_output_filename);
+            ostream& out = **outp;
+            out << text::tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
+            for (size_t i = 0; i < rows.size(); ++i)
+            {
+                const counts_row& row = rows[i];
+                const string& chr = std::get<0>(row);
+                const uint32_t& pos = std::get<1>(row);
+                const uint32_t& nA = std::get<2>(row);
+                const uint32_t& nC = std::get<3>(row);
+                const uint32_t& nG = std::get<4>(row);
+                const uint32_t& nT = std::get<5>(row);
+                const string& nOther = std::get<6>(row);
+                out << chr << '\t' << pos
+                    << '\t' << nA
+                    << '\t' << nC
+                    << '\t' << nG
+                    << '\t' << nT
+                    << '\t' << nOther
+                    << endl;
+            }
+
         }
 
     private:
