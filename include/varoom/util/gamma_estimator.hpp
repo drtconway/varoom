@@ -10,7 +10,7 @@ namespace varoom
     {
     public:
         gamma_estimator()
-            : m_n(0), m_sx(0), m_slx(0), m_sxlx(0), m_last(1e-6)
+            : m_n(0), m_sx(0), m_slx(0), m_sxlx(0)
         {
         }
 
@@ -23,7 +23,6 @@ namespace varoom
                 m_sx += p_x;
                 m_slx += lx;
                 m_sxlx += p_x*lx;
-                m_last = p_x;
             }
             return *this;
         }
@@ -40,23 +39,24 @@ namespace varoom
             double slx = m_slx;
             double sxlx = m_sxlx;
             double v = n * sxlx - sx*slx;
-            if (v == 0.0)
+            if (v > 1e-12)
             {
-                // If all the observations were equal,
-                // v comes out as 0. In that case add
-                // a small jitter observation to avoid
-                // the divide-by-zero.
-                double x = 1.000001 * m_last;
-                double lx = std::log(x);
-                n += 1;
-                sx += x;
-                slx += lx;
-                sxlx += x*lx;
-                v = n * sxlx - sx*slx;
+                double k = n * sx / v;
+                double t = v / (n*n);
+                return std::pair<double,double>(k, t);
             }
-            double k = n * sx / v;
-            double t = v / (n*n);
-            return std::pair<double,double>(k, t);
+            else
+            {
+                // Make the variance 1% of the mean.
+                //
+                // use mean = k*th, variance = k*th*th.
+                //
+                // variance = mean * 0.01 => th = 0.01
+                double m = sx / double(n);
+                double t = 0.01;
+                double k = m / t;
+                return std::pair<double,double>(k, t);
+            }
         }
 
     private:
