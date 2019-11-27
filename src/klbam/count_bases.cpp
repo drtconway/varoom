@@ -2,6 +2,7 @@
 #include "varoom/command.hpp"
 #include "varoom/sam.hpp"
 #include "varoom/sam/pileup.hpp"
+#include "varoom/seq/locus_stream.hpp"
 #include "varoom/util/files.hpp"
 #include "varoom/util/text.hpp"
 #include "varoom/util/typed_tsv.hpp"
@@ -12,6 +13,7 @@
 using namespace std;
 using namespace boost;
 using namespace varoom;
+using namespace varoom::seq;
 
 namespace // anonymous
 {
@@ -97,7 +99,7 @@ namespace // anonymous
 
     typedef pair<string,size_t> seq_and_count;
     typedef vector<seq_and_count> seq_and_count_list;
-    typedef tuple<string,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,string> counts_row;
+    typedef std::tuple<locus_id,uint32_t,uint32_t,uint32_t,uint32_t,string> counts_row;
 
     class pileup_holder : public varoom::sam_pileup
     {
@@ -163,7 +165,7 @@ namespace // anonymous
             }
 
             ind.unmake(tsv_column_value(nOther), other);
-            counts_row row(chr, pos, nA, nC, nG, nT, other);
+            counts_row row(locus_id(chr, pos), nA, nC, nG, nT, other);
             out.push_back(row);
 
             chr = p_chr;
@@ -260,14 +262,13 @@ namespace // anonymous
             for (size_t i = 0; i < rows.size(); ++i)
             {
                 const counts_row& row = rows[i];
-                const string& chr = std::get<0>(row);
-                const uint32_t& pos = std::get<1>(row);
-                const uint32_t& nA = std::get<2>(row);
-                const uint32_t& nC = std::get<3>(row);
-                const uint32_t& nG = std::get<4>(row);
-                const uint32_t& nT = std::get<5>(row);
-                const string& nOther = std::get<6>(row);
-                out << chr << '\t' << pos
+                const locus_id& loc = std::get<0>(row);
+                const uint32_t& nA = std::get<1>(row);
+                const uint32_t& nC = std::get<2>(row);
+                const uint32_t& nG = std::get<3>(row);
+                const uint32_t& nT = std::get<4>(row);
+                const string& nOther = std::get<5>(row);
+                out << loc.chr() << '\t' << loc.pos()
                     << '\t' << nA
                     << '\t' << nC
                     << '\t' << nG

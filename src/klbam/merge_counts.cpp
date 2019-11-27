@@ -1,6 +1,6 @@
 #include "varoom/command.hpp"
+#include "varoom/seq/locus_stream.hpp"
 #include "varoom/util/files.hpp"
-#include "varoom/util/tsv.hpp"
 #include "varoom/util/typed_tsv.hpp"
 
 #include <boost/lexical_cast.hpp>
@@ -8,6 +8,7 @@
 using namespace std;
 using namespace boost;
 using namespace varoom;
+using namespace varoom::seq;
 
 namespace // anonymous
 {
@@ -27,7 +28,6 @@ namespace // anonymous
         return s;
     }
 
-    typedef pair<string,uint32_t> locus;
     typedef pair<string,size_t> seq_and_count;
     typedef vector<seq_and_count> seq_and_count_list;
 
@@ -78,17 +78,32 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            map<locus,counts> res;
+            map<locus_id,counts> res;
 
             vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]"};
 
             for (size_t n = 0; n < m_input_filenames.size(); ++n)
             {
                 input_file_holder_ptr inp = files::in(m_input_filenames[n]);
+                locus_id prev;
+                bool first = true;
                 for (auto t = typed_tsv_reader(**inp, types); t.more(); ++t)
                 {
                     const typed_tsv_row& r = *t;
-                    locus loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
+                    locus_id loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
+                    if (first)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        if (!(prev < loc))
+                        {
+                            std::cerr << prev.chr() << ':' << prev.pos() << " !< " << loc.chr() << ":" << loc.pos() << std::endl;
+                            throw std::runtime_error("loci out of order!");
+                        }
+                    }
+                    prev = loc;
                     res[loc] += counts(any_cast<uint64_t>(r[2]), any_cast<uint64_t>(r[3]),
                                        any_cast<uint64_t>(r[4]), any_cast<uint64_t>(r[5]),
                                        any_cast<const seq_and_count_list&>(r[6]));
@@ -105,8 +120,8 @@ namespace // anonymous
             string scl_str;
             for (auto i = res.begin(); i != res.end(); ++i)
             {
-                const string& chr = i->first.first;
-                const uint32_t& pos = i->first.second;
+                const string& chr = i->first.chr();
+                const uint32_t& pos = i->first.pos();
 
                 scl.clear();
                 for (auto j = i->second.indels.begin(); j != i->second.indels.end(); ++j)

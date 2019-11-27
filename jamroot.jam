@@ -114,7 +114,7 @@ unit-test test_fasta
     ;
 
 unit-test test_fastq
-    : tests/seq/test_fastq.cpp boost_test boost_iostreams
+    : tests/seq/test_fastq.cpp boost_test boost_iostreams pthread
     ;
 
 unit-test test_filter
@@ -123,6 +123,10 @@ unit-test test_filter
 
 unit-test test_fastq_pair
     : tests/seq/test_fastq_pair.cpp boost_test boost_iostreams
+    ;
+
+unit-test test_locus_stream
+    : tests/seq/test_locus_stream.cpp boost_test boost_iostreams pthread
     ;
 
 unit-test test_vcf_info

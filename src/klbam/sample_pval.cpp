@@ -1,4 +1,5 @@
 #include "varoom/command.hpp"
+#include "varoom/seq/locus_stream.hpp"
 #include "varoom/util/typed_tsv.hpp"
 #include "varoom/util/files.hpp"
 
@@ -10,6 +11,7 @@ using namespace std;
 using namespace boost;
 using namespace boost::math;
 using namespace varoom;
+using namespace varoom::seq;
 
 namespace // anonymous
 {
@@ -27,7 +29,6 @@ namespace // anonymous
         return s;
     }
 
-    typedef pair<string,uint32_t> locus;
     typedef pair<string,size_t> seq_and_count;
     typedef vector<seq_and_count> seq_and_count_list;
 
@@ -45,14 +46,14 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            map<locus,pair<double,double>> gammas;
+            map<locus_id,pair<double,double>> gammas;
             {
                 vector<string> gamma_types{"str", "uint", "flt", "flt"};
                 input_file_holder_ptr gammap = files::in(m_gamma_filename);
                 for (typed_tsv_reader gam(**gammap, gamma_types); gam.more(); ++gam)
                 {
                     const typed_tsv_row& r = *gam;
-                    locus loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
+                    locus_id loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
                     pair<double,double> v(any_cast<double>(r[2]), any_cast<double>(r[3]));
                     gammas[loc] = v;
                 }
@@ -68,7 +69,7 @@ namespace // anonymous
             for (typed_tsv_reader sample(**inp, types); sample.more(); ++sample)
             {
                 const typed_tsv_row& r = *sample;
-                locus loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
+                locus_id loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
                 const pair<double,double>& gParams = gammas.find(loc)->second;
                 gamma_distribution<> G(gParams.first, gParams.second);
                 double kld = any_cast<double>(r[7]);

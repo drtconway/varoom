@@ -1,6 +1,10 @@
 #ifndef VAROOM_SEQ_UTILITY_HPP
 #define VAROOM_SEQ_UTILITY_HPP
 
+#include <map>
+#include <string>
+#include <vector>
+
 namespace varoom
 {
     namespace seq

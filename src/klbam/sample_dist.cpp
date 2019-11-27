@@ -1,4 +1,5 @@
 #include "varoom/command.hpp"
+#include "varoom/seq/locus_stream.hpp"
 #include "varoom/util/files.hpp"
 #include "varoom/util/text.hpp"
 #include "varoom/util/typed_tsv.hpp"
@@ -9,6 +10,7 @@
 using namespace std;
 using namespace boost;
 using namespace varoom;
+using namespace varoom::seq;
 
 namespace // anonymous
 {
@@ -31,7 +33,6 @@ namespace // anonymous
         return d;
     }
 
-    typedef pair<string,uint32_t> locus;
     typedef pair<string,size_t> seq_and_count;
     typedef vector<seq_and_count> seq_and_count_list;
 
@@ -63,19 +64,17 @@ namespace // anonymous
             std::vector<double> gProbs;
             std::vector<double> sProbs;
 
-            locus gLoc("", 0);
+            locus_id gLoc;
             if (glob.more())
             {
                 const typed_tsv_row& gRow = *glob;
-                gLoc.first = any_cast<const string&>(gRow[0]);
-                gLoc.second = any_cast<uint64_t>(gRow[1]);
+                gLoc = locus_id(any_cast<const string&>(gRow[0]), any_cast<uint64_t>(gRow[1]));
             }
-            locus sLoc("", 0);
+            locus_id sLoc;
             if (sample.more())
             {
                 const typed_tsv_row& sRow = *sample;
-                sLoc.first = any_cast<const string&>(sRow[0]);
-                sLoc.second = any_cast<uint64_t>(sRow[1]);
+                sLoc = locus_id(any_cast<const string&>(sRow[0]), any_cast<uint64_t>(sRow[1]));
             }
 
             while (glob.more() && sample.more())
@@ -86,8 +85,7 @@ namespace // anonymous
                     if (glob.more())
                     {
                         const typed_tsv_row& gRow = *glob;
-                        gLoc.first = any_cast<const string&>(gRow[0]);
-                        gLoc.second = any_cast<uint64_t>(gRow[1]);
+                        gLoc = locus_id(any_cast<const string&>(gRow[0]), any_cast<uint64_t>(gRow[1]));
                     }
                     continue;
                 }
@@ -103,8 +101,7 @@ namespace // anonymous
                     if (sample.more())
                     {
                         const typed_tsv_row& sRow = *sample;
-                        sLoc.first = any_cast<const string&>(sRow[0]);
-                        sLoc.second = any_cast<uint64_t>(sRow[1]);
+                        sLoc = locus_id(any_cast<const string&>(sRow[0]), any_cast<uint64_t>(sRow[1]));
                     }
                     continue;
                 }
@@ -195,16 +192,14 @@ namespace // anonymous
                 if (glob.more())
                 {
                     const typed_tsv_row& gRow = *glob;
-                    gLoc.first = any_cast<const string&>(gRow[0]);
-                    gLoc.second = any_cast<uint64_t>(gRow[1]);
+                    gLoc = locus_id(any_cast<const string&>(gRow[0]), any_cast<uint64_t>(gRow[1]));
                 }
 
                 ++sample;
                 if (sample.more())
                 {
                     const typed_tsv_row& sRow = *sample;
-                    sLoc.first = any_cast<const string&>(sRow[0]);
-                    sLoc.second = any_cast<uint64_t>(sRow[1]);
+                    sLoc = locus_id(any_cast<const string&>(sRow[0]), any_cast<uint64_t>(sRow[1]));
                 }
             }
 
