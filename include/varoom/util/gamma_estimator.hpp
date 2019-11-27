@@ -14,6 +14,11 @@ namespace varoom
         {
         }
 
+        gamma_estimator(const size_t& p_n, const double& p_sx, const double& p_slx, const double& p_sxlx)
+            : m_n(p_n), m_sx(p_sx), m_slx(p_slx), m_sxlx(p_sxlx)
+        {
+        }
+
         gamma_estimator& push_back(const double& p_x)
         {
             ++m_n;
@@ -32,12 +37,41 @@ namespace varoom
             return m_n;
         }
 
+        double sum_x() const
+        {
+            return m_sx;
+        }
+
+        double sum_log_x() const
+        {
+            return m_slx;
+        }
+
+        double sum_x_log_x() const
+        {
+            return m_sxlx;
+        }
+
+        gamma_estimator& operator+=(const gamma_estimator& p_other)
+        {
+            m_n += p_other.m_n;
+            m_sx += p_other.m_sx;
+            m_slx += p_other.m_slx;
+            m_sxlx += p_other.m_sxlx;
+            return *this;
+        }
+
         std::pair<double,double> operator()() const
         {
-            size_t n = m_n;
-            double sx = m_sx;
-            double slx = m_slx;
-            double sxlx = m_sxlx;
+            return estimate(m_n, m_sx, m_slx, m_sxlx);
+        }
+
+        static std::pair<double,double> estimate(const size_t& p_n, const double& p_sx, const double& p_slx, const double& p_sxlx)
+        {
+            size_t n = p_n;
+            double sx = p_sx;
+            double slx = p_slx;
+            double sxlx = p_sxlx;
             double v = n * sxlx - sx*slx;
             if (v > 1e-12)
             {
