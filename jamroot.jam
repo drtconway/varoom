@@ -109,6 +109,10 @@ unit-test test_sam_reader
     : tests/sam/test_sam_reader.cpp boost_test
     ;
 
+unit-test test_compact_seq
+    : tests/seq/test_compact_seq.cpp boost_test boost_iostreams
+    ;
+
 unit-test test_fasta
     : tests/seq/test_fasta.cpp boost_test boost_iostreams
     ;
