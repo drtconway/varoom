@@ -35,20 +35,21 @@ namespace varoom
             m_ops.clear();
             decode_cigar(p_cigar, m_ops);
 
-            flush_upto(p_chr, p_pos);
+            flush_upto(p_chr, p_pos - 1);
 
             m_chr = p_chr;
             m_pos = p_pos;
 
             uint32_t i = 0;
             uint32_t j = 0;
-            for (auto itr = m_ops.begin(); itr != m_ops.end(); ++itr)
+            for (size_t k = 0; k < m_ops.size(); ++k)
             {
-                switch (itr->first)
+                const cigar_op& op = m_ops[k];
+                switch (op.first)
                 {
                     case 'M':
                     {
-                        for (uint32_t k = 0; k < itr->second; ++k)
+                        for (uint32_t l = 0; l < op.second; ++l)
                         {
                             char q = p_seq[i];
                             uint32_t p = p_pos + j;
@@ -60,33 +61,30 @@ namespace varoom
                     }
                     case 'I':
                     {
-                        uint32_t n = itr->second;
-                        std::string q = std::string("^") + std::string(p_seq.begin() + i, p_seq.begin() + i + n);
-                        std::uint32_t p = p_pos + j;
+                        std::string q = std::string("^") + std::string(p_seq.begin() + i, p_seq.begin() + i + op.second);
+                        std::uint32_t p = p_pos + j - 1;
                         m_pileup[p][q] += 1;
-                        i += n;
+                        i += op.second;
                         break;
                     }
                     case 'D':
                     {
-                        for (uint32_t k = 0; k < itr->second; ++k)
-                        {
-                            char q = '*';
-                            std::uint32_t p = p_pos + j;
-                            m_pileup[p][atom(q)] += 1;
-                            ++j;
-                        }
+                        std::string q = std::string("*") + boost::lexical_cast<std::string>(op.second);
+                        std::uint32_t p = p_pos + j - 1;
+                        m_pileup[p][q] += 1;
+                        j += op.second;
                         break;
                     }
                     case 'S':
                     {
-                        i += itr->second;
-                        j += itr->second;
+                        std::string q = std::string(">") + std::string(p_seq.begin() + i, p_seq.begin() + i + op.second);
+                        std::uint32_t p = p_pos + j - 1;
+                        m_pileup[p][q] += 1;
+                        i += op.second;
                         break;
                     }
                     case 'H':
                     {
-                        j += itr->second;
                         break;
                     }
                     default:

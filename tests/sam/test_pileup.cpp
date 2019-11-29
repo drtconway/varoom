@@ -84,10 +84,10 @@ BOOST_AUTO_TEST_CASE( test2Ins )
 
     BOOST_CHECK_EQUAL(P.piles[26].pos, 29769822);
     BOOST_CHECK_EQUAL(P.piles[26].base, "G");
-    BOOST_CHECK_EQUAL(P.piles[27].pos, 29769823);
-    BOOST_CHECK_EQUAL(P.piles[27].base, "A");
+    BOOST_CHECK_EQUAL(P.piles[27].pos, 29769822);
+    BOOST_CHECK_EQUAL(P.piles[27].base, "^A");
     BOOST_CHECK_EQUAL(P.piles[28].pos, 29769823);
-    BOOST_CHECK_EQUAL(P.piles[28].base, "^A");
+    BOOST_CHECK_EQUAL(P.piles[28].base, "A");
     BOOST_CHECK_EQUAL(P.piles[29].pos, 29769824);
     BOOST_CHECK_EQUAL(P.piles[29].base, "A");
     BOOST_CHECK_EQUAL(P.piles[30].pos, 29769825);
@@ -113,9 +113,9 @@ BOOST_AUTO_TEST_CASE( test3Del )
     P.end();
 
     BOOST_CHECK_EQUAL(P.piles[7].pos, 29769961);
-    BOOST_CHECK_EQUAL(P.piles[7].base, "T");
-    BOOST_CHECK_EQUAL(P.piles[8].pos, 29769962);
-    BOOST_CHECK_EQUAL(P.piles[8].base, "*");
+    BOOST_CHECK_EQUAL(P.piles[7].base, "*1");
+    BOOST_CHECK_EQUAL(P.piles[8].pos, 29769961);
+    BOOST_CHECK_EQUAL(P.piles[8].base, "T");
     BOOST_CHECK_EQUAL(P.piles[9].pos, 29769963);
     BOOST_CHECK_EQUAL(P.piles[9].base, "A");
 }
