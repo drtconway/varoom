@@ -60,8 +60,9 @@ namespace varoom
                         std::string s(rd.second.begin() + p, rd.second.begin() + q);
                         std::string z = gzip_strings::compress(s);
                         (**outp).write(&z[0], z.size());
-                        ztot += z.size();
                         toc[rd.first].push_back(std::pair<size_t,size_t>(ztot, ztot+z.size()));
+                        std::cerr << rd.first << "#" << (toc[rd.first].size() - 1) << "\t" << ztot << "\t" << (ztot + z.size()) << "\t" << (**outp).tellp() << std::endl;
+                        ztot += z.size();
                     }
                 }
 
@@ -127,7 +128,9 @@ namespace varoom
 
             void load_block(const std::string& p_acc, const size_t& p_block_num, std::string& p_res)
             {
+                std::cerr << "loading " << p_acc << "#" << p_block_num << std::endl;
                 std::pair<size_t,size_t> rng = m_toc.find(p_acc)->second[p_block_num];
+                std::cerr << "in range [" << rng.first << ", " << rng.second << ")" << std::endl;
                 size_t l = rng.second - rng.first;
                 std::string buf(l, '\0');
                 m_dat.seekg(rng.first);
