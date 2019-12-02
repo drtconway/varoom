@@ -1,6 +1,9 @@
 #ifndef VAROOM_UTIL_LRU_CACHE_HPP
 #define VAROOM_UTIL_LRU_CACHE_HPP
 
+#include <functional>
+#include <map>
+
 namespace varoom
 {
     template <typename K, typename V>
@@ -36,7 +39,7 @@ namespace varoom
             m_cache[p_key] = m_lookup(p_key);
         }
 
-        void touch(p_key)
+        void touch(const K& p_key)
         {
             auto itr = m_lru_idx.find(p_key);
             if (itr != m_lru_idx.end())
