@@ -12,6 +12,8 @@ namespace varoom
 {
     namespace seq
     {
+        // Implementation based on
+        // https://www.ncbi.nlm.nih.gov/genbank/release/233/
         typedef std::pair<std::string,std::string> string_pair;
 
         class genbank_location

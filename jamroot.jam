@@ -129,6 +129,10 @@ unit-test test_fastq_pair
     : tests/seq/test_fastq_pair.cpp boost_test boost_iostreams
     ;
 
+unit-test test_genbank
+    : tests/seq/test_genbank.cpp boost_test boost_iostreams pthread
+    ;
+
 unit-test test_locus_stream
     : tests/seq/test_locus_stream.cpp boost_test boost_iostreams pthread
     ;
@@ -147,6 +151,10 @@ unit-test test_gamma_estimator
 
 unit-test test_lazy
     : tests/util/test_lazy.cpp boost_test
+    ;
+
+unit-test test_lru_cache
+    : tests/util/test_lru_cache.cpp boost_test
     ;
 
 unit-test test_strong_typedef
