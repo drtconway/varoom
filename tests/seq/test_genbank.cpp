@@ -1,6 +1,7 @@
 #include "varoom/seq/genbank.hpp"
 
 #include <initializer_list>
+#include <fstream>
 #include <sstream>
 #include <iostream>
 
@@ -324,6 +325,32 @@ BOOST_AUTO_TEST_CASE( test_parser_9 )
                 BOOST_CHECK_EQUAL(rec.entries[0].name, "ORIGIN");
                 BOOST_CHECK_EQUAL(rec.entries[0].features.size(), 0);
                 BOOST_CHECK_EQUAL(rec.entries[0].sequence, "cgttatttaaggtgttacatagttctatggaaatagggtctatacctttcgccttacaatgtaatttctt..........");
+                break;
+            }
+            default:
+            {
+                BOOST_REQUIRE_EQUAL(n == 0, true);
+            }
+        };
+    }
+}
+
+BOOST_AUTO_TEST_CASE( test_parser_10 )
+{
+    using namespace std;
+    using namespace varoom::seq;
+
+    ifstream in("tests/data/NC_001802.gbk");
+    size_t n = 0;
+    for (genbank_reader r(in); r.more(); ++r, ++n)
+    {
+        switch (n)
+        {
+            case 0:
+            {
+                const genbank_record& rec = *r;
+                BOOST_REQUIRE_EQUAL(rec.entries.size(), 15);
+                //cout << rec.to_json() << endl;
                 break;
             }
             default:

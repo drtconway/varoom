@@ -10,19 +10,25 @@
 #include <vector>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <nlohmann/json.hpp>
 
 namespace varoom
 {
     namespace seq
     {
+        typedef nlohmann::json json;
+
         // Implementation based on
         // https://www.ncbi.nlm.nih.gov/genbank/release/233/
+
         typedef std::pair<std::string,std::string> string_pair;
 
         class genbank_location
         {
         public:
             virtual ~genbank_location() {}
+
+            virtual json to_json() const = 0;
         };
         typedef std::shared_ptr<genbank_location> genbank_location_ptr;
 
@@ -44,6 +50,14 @@ namespace varoom
                 return m_last;
             }
 
+            virtual json to_json() const
+            {
+                json res;
+                res.push_back(m_first);
+                res.push_back(m_last);
+                return res;
+            }
+
         private:
             const size_t m_first;
             const size_t m_last;
@@ -60,6 +74,13 @@ namespace varoom
             const genbank_location& source() const
             {
                 return *m_src;
+            }
+
+            virtual json to_json() const
+            {
+                json res;
+                res["complement"] = source().to_json();
+                return res;
             }
 
         private:
@@ -79,6 +100,18 @@ namespace varoom
                 return m_srcs;
             }
 
+            virtual json to_json() const
+            {
+                json kids;
+                for (size_t i = 0; i < m_srcs.size(); ++i)
+                {
+                    kids.push_back(m_srcs[i]->to_json());
+                }
+                json res;
+                res["join"] = kids;
+                return res;
+            }
+
         private:
             std::vector<genbank_location_ptr> m_srcs;
         };
@@ -90,6 +123,18 @@ namespace varoom
             std::string type;
             genbank_location_ptr location;
             std::vector<genbank_qualifier> qualifiers;
+
+            json to_json() const
+            {
+                json res;
+                res["type"] = type;
+                res["location"] = location->to_json();
+                for (size_t i = 0; i < qualifiers.size(); ++i)
+                {
+                    res["qualifiers"][qualifiers[i].first].push_back(qualifiers[i].second);
+                }
+                return res;
+            }
         };
 
         struct genbank_entry
@@ -99,11 +144,59 @@ namespace varoom
             std::vector<string_pair> sub_entries;
             std::vector<genbank_feature> features;
             std::string sequence;
+
+            json to_json() const
+            {
+                json res;
+                res[name] = json::array();
+
+                if (value.size() > 0)
+                {
+                    res[name].push_back(value);
+                }
+
+                if (sub_entries.size() > 0)
+                {
+                    json sub;
+                    for (size_t i = 0; i < sub_entries.size(); ++i)
+                    {
+                        sub[sub_entries[i].first].push_back(sub_entries[i].second);
+                    }
+                    res[name].push_back(sub);
+                }
+
+                if (features.size())
+                {
+                    json feat;
+                    for (size_t i = 0; i < features.size(); ++i)
+                    {
+                        feat.push_back(features[i].to_json());
+                    }
+                    res[name].push_back(feat);
+                }
+
+                if (sequence.size() > 0)
+                {
+                    res[name].push_back(sequence);
+                }
+
+                return res;
+            }
         };
 
         struct genbank_record
         {
             std::vector<genbank_entry> entries;
+
+            json to_json() const
+            {
+                json res;
+                for (size_t i = 0; i < entries.size(); ++i)
+                {
+                    res.push_back(entries[i].to_json());
+                }
+                return res;
+            }
         };
 
         class genbank_reader
