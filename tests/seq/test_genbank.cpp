@@ -141,3 +141,195 @@ BOOST_AUTO_TEST_CASE( test_parser_3 )
         };
     }
 }
+
+BOOST_AUTO_TEST_CASE( test_parser_4 )
+{
+    using namespace std;
+    using namespace varoom::seq;
+
+    const std::string fa = compose({
+       //0123456789012345678901234567890123456789
+        "FEATURES             Location/Qualifiers\n",
+        "     source          107349540\n",
+        "//\n"
+    });
+
+    istringstream in(fa);
+    size_t n = 0;
+    for (genbank_reader r(in); r.more(); ++r, ++n)
+    {
+        switch (n)
+        {
+            case 0:
+            {
+                const genbank_record& rec = *r;
+                BOOST_REQUIRE_EQUAL(rec.entries.size(), 1);
+                BOOST_CHECK_EQUAL(rec.entries[0].name, "FEATURES");
+                BOOST_CHECK_EQUAL(rec.entries[0].features.size(), 1);
+                BOOST_CHECK_EQUAL(rec.entries[0].features[0].type, "source");
+                break;
+            }
+            default:
+            {
+                BOOST_REQUIRE_EQUAL(n == 0, true);
+            }
+        };
+    }
+}
+
+BOOST_AUTO_TEST_CASE( test_parser_5 )
+{
+    using namespace std;
+    using namespace varoom::seq;
+
+    const std::string fa = compose({
+       //0123456789012345678901234567890123456789
+		"FEATURES             Location/Qualifiers\n",
+		"     source          1..107349540\n",
+		"                     /organism=\"Homo sapiens\"\n",
+		"                     /mol_type=\"genomic DNA\"\n",
+		"                     /db_xref=\"taxon:9606\"\n",
+		"                     /chromosome=\"14\"\n",
+        "//\n"
+    });
+
+    istringstream in(fa);
+    size_t n = 0;
+    for (genbank_reader r(in); r.more(); ++r, ++n)
+    {
+        switch (n)
+        {
+            case 0:
+            {
+                const genbank_record& rec = *r;
+                BOOST_REQUIRE_EQUAL(rec.entries.size(), 1);
+                BOOST_CHECK_EQUAL(rec.entries[0].name, "FEATURES");
+                BOOST_CHECK_EQUAL(rec.entries[0].features.size(), 1);
+                BOOST_CHECK_EQUAL(rec.entries[0].features[0].type, "source");
+                BOOST_CHECK_EQUAL(rec.entries[0].features[0].qualifiers.size(), 4);
+                BOOST_CHECK_EQUAL(rec.entries[0].features[0].qualifiers[0].first, "organism");
+                BOOST_CHECK_EQUAL(rec.entries[0].features[0].qualifiers[0].second, "Homo sapiens");
+                break;
+            }
+            default:
+            {
+                BOOST_REQUIRE_EQUAL(n == 0, true);
+            }
+        };
+    }
+}
+
+BOOST_AUTO_TEST_CASE( test_parser_6 )
+{
+    using namespace std;
+    using namespace varoom::seq;
+
+    const std::string fa = compose({
+       //0123456789012345678901234567890123456789
+		"FEATURES             Location/Qualifiers\n",
+		"     source          1..107349540\n",
+		"     source          <1..107349540\n",
+		"     source          1..>107349540\n",
+		"     source          <1..>107349540\n",
+        "//\n"
+    });
+
+    istringstream in(fa);
+    size_t n = 0;
+    for (genbank_reader r(in); r.more(); ++r, ++n)
+    {
+        switch (n)
+        {
+            case 0:
+            {
+                const genbank_record& rec = *r;
+                BOOST_REQUIRE_EQUAL(rec.entries.size(), 1);
+                BOOST_CHECK_EQUAL(rec.entries[0].name, "FEATURES");
+                BOOST_CHECK_EQUAL(rec.entries[0].features.size(), 4);
+                break;
+            }
+            default:
+            {
+                BOOST_REQUIRE_EQUAL(n == 0, true);
+            }
+        };
+    }
+}
+
+BOOST_AUTO_TEST_CASE( test_parser_7 )
+{
+    using namespace std;
+    using namespace varoom::seq;
+
+    const std::string fa = compose({
+       //0123456789012345678901234567890123456789
+		"FEATURES             Location/Qualifiers\n",
+		"     gene            complement(19410589..19413792)\n",
+		"                     /gene=\"USP10P2\"\n",
+		"                     /note=\"ubiquitin specific peptidase10 pseudogene 2;\n",
+		"                     Derived by automated computational analysis using gene\n",
+		"                     prediction method: Curated Genomic.\"\n",
+		"                     /pseudo\n",
+		"                     /db_xref=\"GeneID:780778\"\n",
+		"                     /db_xref=\"HGNC:HGNC:33272\"\n",
+        "//\n"
+    });
+
+    istringstream in(fa);
+    size_t n = 0;
+    for (genbank_reader r(in); r.more(); ++r, ++n)
+    {
+        switch (n)
+        {
+            case 0:
+            {
+                const genbank_record& rec = *r;
+                BOOST_REQUIRE_EQUAL(rec.entries.size(), 1);
+                BOOST_CHECK_EQUAL(rec.entries[0].name, "FEATURES");
+                BOOST_CHECK_EQUAL(rec.entries[0].features.size(), 1);
+                BOOST_CHECK_EQUAL(rec.entries[0].features[0].qualifiers.size(), 5);
+                break;
+            }
+            default:
+            {
+                BOOST_REQUIRE_EQUAL(n == 0, true);
+            }
+        };
+    }
+}
+
+BOOST_AUTO_TEST_CASE( test_parser_9 )
+{
+    using namespace std;
+    using namespace varoom::seq;
+
+    const std::string fa = compose({
+		"ORIGIN      \n",
+		"        1 cgttatttaa ggtgttacat agttctatgg aaatagggtc tatacctttc gccttacaat\n",
+		"       61 gtaatttctt ..........\n",
+        "//\n"
+       //0123456789012345678901234567890123456789
+    });
+
+    istringstream in(fa);
+    size_t n = 0;
+    for (genbank_reader r(in); r.more(); ++r, ++n)
+    {
+        switch (n)
+        {
+            case 0:
+            {
+                const genbank_record& rec = *r;
+                BOOST_REQUIRE_EQUAL(rec.entries.size(), 1);
+                BOOST_CHECK_EQUAL(rec.entries[0].name, "ORIGIN");
+                BOOST_CHECK_EQUAL(rec.entries[0].features.size(), 0);
+                BOOST_CHECK_EQUAL(rec.entries[0].sequence, "cgttatttaaggtgttacatagttctatggaaatagggtctatacctttcgccttacaatgtaatttctt..........");
+                break;
+            }
+            default:
+            {
+                BOOST_REQUIRE_EQUAL(n == 0, true);
+            }
+        };
+    }
+}
