@@ -245,6 +245,10 @@ namespace varoom
             {
                 if (!more() || !is_keyword_line(m_line))
                 {
+                    if (more())
+                    {
+                        std::cerr << m_line << std::endl;
+                    }
                     throw std::runtime_error("expected KEYWORD");
                 }
                 string_pair kwl = split_keyword_line(m_line);
@@ -315,6 +319,7 @@ namespace varoom
                 boost::algorithm::trim(m_line);
                 if (!boost::algorithm::starts_with(m_line, "/"))
                 {
+                    std::cerr << m_line << std::endl;
                     throw std::runtime_error("qualifiers must start with /");
                 }
                 
@@ -388,20 +393,20 @@ namespace varoom
             {
                 std::smatch m;
 
-                std::regex simple1("([0-9]+)");
+                static const std::regex simple1("([0-9]+)");
                 if (std::regex_match(p_text, m, simple1))
                 {
                     size_t pos = boost::lexical_cast<size_t>(m[1].str());
                     return genbank_location_ptr(new range_genbank_location(pos, pos));
                 }
-                std::regex simple2("([0-9]+)[.][.]([0-9]+)");
+                static const std::regex simple2("([0-9]+)[.][.]([0-9]+)");
                 if (std::regex_match(p_text, m, simple2))
                 {
                     size_t first_pos = boost::lexical_cast<size_t>(m[1].str());
                     size_t last_pos = boost::lexical_cast<size_t>(m[2].str());
                     return genbank_location_ptr(new range_genbank_location(first_pos, last_pos));
                 }
-                std::regex uncertain("(<)?([0-9]+)[.][.](>)?([0-9]+)");
+                static const std::regex uncertain("(<)?([0-9]+)[.][.](>)?([0-9]+)");
                 if (std::regex_match(p_text, m, uncertain))
                 {
                     std::cerr << "warning: unknown locations not currently supported (" << p_text << ")" << std::endl;
@@ -448,14 +453,14 @@ namespace varoom
                     u = m_line;
                 }
                 //std::cerr << v << std::endl;
-                std::regex complement("complement[(](.*)[)]");
+                static const std::regex complement("complement[(](.*)[)]");
                 if (std::regex_match(v, m, complement))
                 {
                     std::string inner = m[1].str();
                     genbank_location_ptr locp = parse_location(inner);
                     return genbank_location_ptr(new complement_genbank_location(locp));
                 }
-                std::regex join("join[(](.*)[)]");
+                static const std::regex join("join[(](.*)[)]");
                 if (std::regex_match(v, m, join))
                 {
                     std::vector<genbank_location_ptr> locs;
@@ -560,12 +565,12 @@ namespace varoom
 
             static bool is_entry_continuation_line(const std::string& p_line)
             {
-                return count_leading_blanks(p_line) == 12;
+                return count_leading_blanks(p_line) >= 12;
             }
 
             static bool is_feature_continuation_line(const std::string& p_line)
             {
-                return count_leading_blanks(p_line) == 21;
+                return count_leading_blanks(p_line) >= 21;
             }
 
             static size_t count_leading_blanks(const std::string& p_line)
@@ -593,11 +598,18 @@ namespace varoom
 
             void next_line()
             {
-                if (!std::getline(m_in, m_line))
+                while (more())
                 {
-                    m_more = false;
+                    if (!std::getline(m_in, m_line))
+                    {
+                        m_more = false;
+                    }
+                    boost::algorithm::trim_right(m_line);
+                    if (m_line.size() > 0)
+                    {
+                        return;
+                    }
                 }
-                boost::algorithm::trim_right(m_line);
             }
 
             std::istream& m_in;
