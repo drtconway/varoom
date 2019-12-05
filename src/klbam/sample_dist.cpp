@@ -52,7 +52,7 @@ namespace // anonymous
         {
             output_file_holder_ptr outp = files::out(m_output_filename);
             std::ostream& out = **outp;
-            out << text::tabs({"chr", "pos", "ref", "nA", "nC", "nG", "nT", "indel", "kld"}) << std::endl;
+            out << text::tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel", "kld"}) << std::endl;
 
             input_file_holder_ptr globp = files::in(m_global_filename);
             input_file_holder_ptr inp = files::in(m_input_filename);
