@@ -165,6 +165,10 @@ unit-test test_subtext
     : tests/util/test_subtext.cpp boost_test
     ;
 
+unit-test test_table
+    : tests/util/test_table.cpp boost_test
+    ;
+
 unit-test test_tuple_tsv
     : tests/util/test_tuple_tsv.cpp boost_test
     ;
