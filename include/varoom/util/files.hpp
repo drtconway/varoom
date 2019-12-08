@@ -3,7 +3,9 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -128,42 +130,226 @@ namespace varoom
             boost::iostreams::gzip_compressor m_gzip;
             boost::iostreams::filtering_ostream m_filter;
         };
+
+        class plain_input_string_file_holder : public input_file_holder
+        {
+        public:
+            plain_input_string_file_holder(const std::string& p_content)
+                : m_file(p_content)
+            {
+            }
+
+            std::istream& operator*()
+            {
+                return m_file;
+            }
+
+        private:
+            std::istringstream m_file;
+        };
+
+        class plain_output_string_file_holder : public output_file_holder
+        {
+        public:
+            plain_output_string_file_holder(std::map<std::string,std::string>& p_files, const std::string& p_name)
+                : m_files(p_files), m_name(p_name)
+            {
+            }
+
+            std::ostream& operator*()
+            {
+                return m_file;
+            }
+
+            ~plain_output_string_file_holder()
+            {
+                m_files[m_name] = m_file.str();
+            }
+
+        private:
+            std::map<std::string,std::string>& m_files;
+            const std::string m_name;
+            std::ostringstream m_file;
+        };
+
+        class gzip_input_string_file_holder : public input_file_holder
+        {
+        public:
+            gzip_input_string_file_holder(const std::string& p_content)
+                : m_file(p_content, std::ios_base::in | std::ios_base::binary)
+            {
+                m_filter.push(m_gzip);
+                m_filter.push(m_file);
+            }
+
+            std::istream& operator*()
+            {
+                return m_filter;
+            }
+
+        private:
+            std::istringstream m_file;
+            boost::iostreams::gzip_decompressor m_gzip;
+            boost::iostreams::filtering_istream m_filter;
+        };
+
+        class gzip_output_string_file_holder : public output_file_holder
+        {
+        public:
+            gzip_output_string_file_holder(std::map<std::string,std::string>& p_files, const std::string& p_name)
+                : m_files(p_files), m_name(p_name), m_file(std::ios_base::out | std::ios_base::binary)
+            {
+                m_filter.push(m_gzip);
+                m_filter.push(m_file);
+            }
+
+            std::ostream& operator*()
+            {
+                return m_filter;
+            }
+
+            ~gzip_output_string_file_holder()
+            {
+                m_files[m_name] = m_file.str();
+            }
+
+        private:
+            std::map<std::string,std::string>& m_files;
+            const std::string m_name;
+            std::ostringstream m_file;
+            boost::iostreams::gzip_compressor m_gzip;
+            boost::iostreams::filtering_ostream m_filter;
+        };
+
+        class files_impl
+        {
+        public:
+            virtual input_file_holder_ptr in(const std::string& p_name) = 0;
+
+            virtual output_file_holder_ptr out(const std::string& p_name) = 0;
+
+            virtual bool exists(const std::string& p_name) = 0;
+        };
+
+        class basic_files_impl : public files_impl
+        {
+        public:
+            virtual input_file_holder_ptr in(const std::string& p_name)
+            {
+                if (p_name == "-")
+                {
+                    return input_file_holder_ptr(new detail::cin_file_holder);
+                }
+                if (varoom::text::ends_with(p_name, ".gz"))
+                {
+                    return input_file_holder_ptr(new detail::gzip_input_file_holder(p_name));
+                }
+                return input_file_holder_ptr(new detail::plain_input_file_holder(p_name));
+            }
+
+            virtual output_file_holder_ptr out(const std::string& p_name)
+            {
+                if (p_name == "-")
+                {
+                    return output_file_holder_ptr(new detail::cout_file_holder);
+                }
+                if (varoom::text::ends_with(p_name, ".gz"))
+                {
+                    return output_file_holder_ptr(new detail::gzip_output_file_holder(p_name));
+                }
+                return output_file_holder_ptr(new detail::plain_output_file_holder(p_name));
+            }
+
+            virtual bool exists(const std::string& p_name)
+            {
+                struct stat buf;
+                return (stat(p_name.c_str(), &buf) == 0);
+            }
+        };
+
+        class string_files_impl : public files_impl
+        {
+        public:
+            string_files_impl(std::map<std::string,std::string>& p_files)
+                : m_files(p_files)
+            {
+            }
+
+            virtual input_file_holder_ptr in(const std::string& p_name)
+            {
+                if (!exists(p_name))
+                {
+                    throw std::runtime_error("no such string file");
+                }
+                const std::string& content = m_files.find(p_name)->second;
+                if (varoom::text::ends_with(p_name, ".gz"))
+                {
+                    return input_file_holder_ptr(new detail::gzip_input_string_file_holder(content));
+                }
+                return input_file_holder_ptr(new detail::plain_input_string_file_holder(content));
+            }
+
+            virtual output_file_holder_ptr out(const std::string& p_name)
+            {
+                if (varoom::text::ends_with(p_name, ".gz"))
+                {
+                    return output_file_holder_ptr(new detail::gzip_output_string_file_holder(m_files, p_name));
+                }
+                return output_file_holder_ptr(new detail::plain_output_string_file_holder(m_files, p_name));
+            }
+
+            virtual bool exists(const std::string& p_name)
+            {
+                return m_files.find(p_name) != m_files.end();
+            }
+
+        private:
+            std::map<std::string,std::string>& m_files;
+        };
     }
     // namespace detail
 
-    class files
+    struct files
     {
-    public:
         static input_file_holder_ptr in(const std::string& p_name)
         {
-            if (p_name == "-")
-            {
-                return input_file_holder_ptr(new detail::cin_file_holder);
-            }
-            if (varoom::text::ends_with(p_name, ".gz"))
-            {
-                return input_file_holder_ptr(new detail::gzip_input_file_holder(p_name));
-            }
-            return input_file_holder_ptr(new detail::plain_input_file_holder(p_name));
+            return impl().in(p_name);
         }
 
         static output_file_holder_ptr out(const std::string& p_name)
         {
-            if (p_name == "-")
-            {
-                return output_file_holder_ptr(new detail::cout_file_holder);
-            }
-            if (varoom::text::ends_with(p_name, ".gz"))
-            {
-                return output_file_holder_ptr(new detail::gzip_output_file_holder(p_name));
-            }
-            return output_file_holder_ptr(new detail::plain_output_file_holder(p_name));
+            return impl().out(p_name);
         }
 
         static bool exists(const std::string& p_name)
         {
-            struct stat buf;
-            return (stat(p_name.c_str(), &buf) == 0);
+            return impl().exists(p_name);
+        }
+
+        static void file_impl()
+        {
+                auto p = std::unique_ptr<detail::files_impl>(new detail::basic_files_impl);
+                impl(std::move(p));
+        }
+
+        static void string_impl(std::map<std::string,std::string>& p_files)
+        {
+                auto p = std::unique_ptr<detail::files_impl>(new detail::string_files_impl(p_files));
+                impl(std::move(p));
+        }
+
+        static detail::files_impl& impl(std::unique_ptr<detail::files_impl> p_impl = std::unique_ptr<detail::files_impl>())
+        {
+            static std::unique_ptr<detail::files_impl> impl_ptr;
+            if (p_impl)
+            {
+                impl_ptr = std::move(p_impl);
+            }
+            if (!impl_ptr)
+            {
+                impl_ptr = std::unique_ptr<detail::files_impl>(new detail::basic_files_impl);
+            }
+            return *impl_ptr;
         }
     };
 }
