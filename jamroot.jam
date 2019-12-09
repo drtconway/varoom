@@ -50,7 +50,7 @@ exe mlstea
 #    ;
 
 exe kmers_count
-    : src/kmers/count.cpp boost_iostreams
+    : src/kmers/count.cpp boost_iostreams pthread
     ;
 
 exe xlr_hash_finder
@@ -114,7 +114,7 @@ unit-test test_compact_seq
     ;
 
 unit-test test_fasta
-    : tests/seq/test_fasta.cpp boost_test boost_iostreams
+    : tests/seq/test_fasta.cpp boost_test boost_iostreams pthread
     ;
 
 unit-test test_fastq
@@ -122,11 +122,11 @@ unit-test test_fastq
     ;
 
 unit-test test_filter
-    : tests/seq/test_filter.cpp boost_test boost_iostreams
+    : tests/seq/test_filter.cpp boost_test boost_iostreams pthread
     ;
 
 unit-test test_fastq_pair
-    : tests/seq/test_fastq_pair.cpp boost_test boost_iostreams
+    : tests/seq/test_fastq_pair.cpp boost_test boost_iostreams pthread
     ;
 
 unit-test test_genbank
@@ -145,6 +145,10 @@ unit-test test_codec8
     : tests/util/test_codec8.cpp boost_test
     ;
 
+unit-test test_concurrent_deque
+    : tests/util/test_concurrent_deque.cpp boost_test pthread
+    ;
+
 unit-test test_gamma_estimator
     : tests/util/test_gamma_estimator.cpp boost_test
     ;
@@ -153,8 +157,16 @@ unit-test test_lazy
     : tests/util/test_lazy.cpp boost_test
     ;
 
+unit-test test_lines_of_file
+    : tests/util/test_lines_of_file.cpp boost_test boost_iostreams pthread
+    ;
+
 unit-test test_lru_cache
     : tests/util/test_lru_cache.cpp boost_test
+    ;
+
+unit-test test_parsing
+    : tests/util/test_parsing.cpp boost_test
     ;
 
 unit-test test_strong_typedef
