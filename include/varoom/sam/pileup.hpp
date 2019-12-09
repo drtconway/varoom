@@ -77,9 +77,18 @@ namespace varoom
                     }
                     case 'S':
                     {
-                        std::string q = std::string(">") + boost::lexical_cast<std::string>(op.second);
-                        std::uint32_t p = p_pos + j - 1;
-                        m_pileup[p][q] += 1;
+                        if (k == 0)
+                        {
+                            char q = '<';
+                            std::uint32_t p = p_pos + j - 1;
+                            m_pileup[p][atom(q)] += 1;
+                        }
+                        else
+                        {
+                            char q = '>';
+                            std::uint32_t p = p_pos + j;
+                            m_pileup[p][atom(q)] += 1;
+                        }
                         i += op.second;
                         break;
                     }

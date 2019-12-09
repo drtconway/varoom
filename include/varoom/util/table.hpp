@@ -262,6 +262,21 @@ namespace varoom
             copy<I0+1, I1, O>(p_src, p_dest);
         }
 
+        template <typename... Ts, template <typename...> class T>
+        static void for_each(T<Ts...>& p_src, std::function<void(const std::tuple<Ts...>&)> p_func)
+        {
+            static_assert(std::is_base_of<detail::input_table_implementation<Ts...>, T<Ts...>>::value);
+
+            using row_in = std::tuple<Ts...>;
+
+            row_in x;
+
+            while(p_src.next(x))
+            {
+                p_func(x);
+            }
+        }
+
         template <typename... Ts, template <typename...> class T,
                   typename... Us, template <typename...> class U>
         static void map(std::function<void(const std::tuple<Ts...>&,std::tuple<Us...>&)> p_func, T<Ts...>& p_src, U<Us...>& p_dest)

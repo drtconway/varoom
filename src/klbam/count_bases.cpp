@@ -99,7 +99,7 @@ namespace // anonymous
 
     typedef pair<string,size_t> seq_and_count;
     typedef vector<seq_and_count> seq_and_count_list;
-    typedef std::tuple<locus_id,uint32_t,uint32_t,uint32_t,uint32_t,string> counts_row;
+    typedef std::tuple<locus_id,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,string> counts_row;
 
     class pileup_holder : public varoom::sam_pileup
     {
@@ -136,6 +136,9 @@ namespace // anonymous
             size_t nC = 0;
             size_t nG = 0;
             size_t nT = 0;
+            size_t nN = 0;
+            size_t nX0 = 0;
+            size_t nX1 = 0;
             seq_and_count_list nOther;
             for (auto k = counts.begin(); k != counts.end(); ++k)
             {
@@ -161,11 +164,26 @@ namespace // anonymous
                     nT = cnt;
                     continue;
                 }
+                if (seq == "N")
+                {
+                    nN = cnt;
+                    continue;
+                }
+                if (seq == ">")
+                {
+                    nX0 = cnt;
+                    continue;
+                }
+                if (seq == "<")
+                {
+                    nX1 = cnt;
+                    continue;
+                }
                 nOther.push_back(pair<string,size_t>(seq, cnt));
             }
 
             ind.unmake(tsv_column_value(nOther), other);
-            counts_row row(locus_id(chr, pos), nA, nC, nG, nT, other);
+            counts_row row(locus_id(chr, pos), nA, nC, nG, nT, nN, nX0, nX1, other);
             out.push_back(row);
 
             chr = p_chr;
@@ -258,7 +276,7 @@ namespace // anonymous
             std::sort(rows.begin(), rows.end());
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
-            out << text::tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel"}) << endl;
+            out << text::tabs({"chr", "pos", "nA", "nC", "nG", "nT", "nN", "nX0", "nX1", "indel"}) << endl;
             for (size_t i = 0; i < rows.size(); ++i)
             {
                 const counts_row& row = rows[i];
@@ -267,12 +285,18 @@ namespace // anonymous
                 const uint32_t& nC = std::get<2>(row);
                 const uint32_t& nG = std::get<3>(row);
                 const uint32_t& nT = std::get<4>(row);
-                const string& nOther = std::get<5>(row);
+                const uint32_t& nN = std::get<5>(row);
+                const uint32_t& nX0 = std::get<6>(row);
+                const uint32_t& nX1 = std::get<7>(row);
+                const string& nOther = std::get<8>(row);
                 out << loc.chr() << '\t' << loc.pos()
                     << '\t' << nA
                     << '\t' << nC
                     << '\t' << nG
                     << '\t' << nT
+                    << '\t' << nN
+                    << '\t' << nX0
+                    << '\t' << nX1
                     << '\t' << nOther
                     << endl;
             }
