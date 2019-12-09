@@ -6,7 +6,9 @@
 #include <tuple>
 #include <boost/algorithm/string/trim.hpp>
 
-#include <iostream>
+#ifndef VAROOM_UTIL_LINES_OF_FILE_HPP
+#include "varoom/util/lines_of_file.hpp"
+#endif
 
 namespace varoom
 {
@@ -21,7 +23,7 @@ namespace varoom
             typedef item_type const& item_result_type;
 
             fastq_reader(std::istream& p_in)
-                : m_in(p_in), m_more(true)
+                : m_lines(p_in), m_more(true)
             {
                 next();
             }
@@ -45,7 +47,7 @@ namespace varoom
         private:
             void next()
             {
-                if (!std::getline(m_in, m_next))
+                if (!m_lines.next(m_next))
                 {
                     m_more = false;
                     return;
@@ -61,7 +63,7 @@ namespace varoom
                 id1.clear();
                 id1.insert(id1.end(), m_next.begin() + 1, m_next.end()); // drop the @
 
-                if (!getline(m_in, m_next))
+                if (!m_lines.next(m_next))
                 {
                     throw std::domain_error("missing read sequence line.");
                 }
@@ -71,7 +73,7 @@ namespace varoom
                 seq.clear();
                 seq.insert(seq.end(), m_next.begin(), m_next.end());
 
-                if (!getline(m_in, m_next) || !starts_with(m_next, '+'))
+                if (!m_lines.next(m_next) || !starts_with(m_next, '+'))
                 {
                     throw std::domain_error("missing read spacer line.");
                 }
@@ -81,7 +83,7 @@ namespace varoom
                 id2.clear();
                 id2.insert(id2.end(), m_next.begin() + 1, m_next.end()); // drop the +
 
-                if (!getline(m_in, m_next))
+                if (!m_lines.next(m_next))
                 {
                     throw std::domain_error("missing read quality score line.");
                 }
@@ -97,7 +99,7 @@ namespace varoom
                 return p_str.size() > 0 && p_str.front() == p_ch;
             }
 
-            std::istream& m_in;
+            varoom::lines_of_file<true> m_lines;
             bool m_more;
             std::string m_next;
             fastq_read m_curr;
