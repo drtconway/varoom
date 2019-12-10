@@ -6,13 +6,35 @@
 #include <tuple>
 #include <boost/flyweight.hpp>
 
+#ifndef VAROOM_SEQ_LOCUS_ORDERING_HPP
+#include "varoom/seq/locus_ordering.hpp"
+#endif
+
 namespace varoom
 {
     namespace klbam
     {
-        using chrom = boost::flyweight<std::string>;
+        struct chrom : boost::flyweight<std::string>
+        {
+            chrom() {}
+
+            chrom(const std::string& p_str)
+                : boost::flyweight<std::string>(p_str)
+            {
+            }
+
+            bool operator<(const chrom& p_other) const
+            {
+                return varoom::locus_ordering::less(*this, p_other);
+            }
+        };
+
         using counts_type = std::tuple<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
         using counts_table = varoom::table::basic_inmemory_table<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
+        using counts_istream_reader = varoom::table::basic_istream_table<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
+        using counts_read_iterator = varoom::table::basic_read_iterator<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
+        using counts_write_iterator = varoom::table::basic_write_iterator<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
+        using counts_ostream_writer = varoom::table::basic_ostream_table<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
         using scores_type = std::tuple<double,double>;
 
         struct counts

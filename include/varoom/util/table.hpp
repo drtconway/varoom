@@ -12,6 +12,8 @@
 #include "varoom/util/subtext.hpp"
 #endif
 
+#include <iostream>
+
 namespace varoom
 {
     namespace detail
@@ -236,7 +238,19 @@ namespace varoom
     {
     public:
         template <typename... Ts>
+        using basic_istream_table = detail::streamed_input_table<Ts...>;
+
+        template <typename... Ts>
+        using basic_ostream_table = detail::streamed_output_table<Ts...>;
+
+        template <typename... Ts>
         using basic_inmemory_table = detail::inmemory_table<Ts...>;
+
+        template<typename... Ts>
+        using basic_read_iterator = detail::streamed_inmemory_table<Ts...>;
+
+        template<typename... Ts>
+        using basic_write_iterator = detail::streamed_outmemory_table<Ts...>;
 
         template <std::size_t I0, std::size_t I1, std::size_t O = 0,
                   typename... Ts, template <typename...> class T,
@@ -278,6 +292,54 @@ namespace varoom
             while(p_src.next(x))
             {
                 p_func(x);
+            }
+        }
+
+        template <typename... Ts, template <typename...> class T, template <typename...> class U, template <typename...> class V>
+        static void merge(T<Ts...>& p_lhs, U<Ts...>& p_rhs, V<Ts...>& p_res,
+                          std::function<bool(const std::tuple<Ts...>&, const std::tuple<Ts...>&)> p_less,
+                          std::function<void(const std::tuple<Ts...>&, const std::tuple<Ts...>&, std::tuple<Ts...>&)> p_combine)
+        {
+            static_assert(std::is_base_of<detail::input_table_implementation<Ts...>, T<Ts...>>::value);
+            static_assert(std::is_base_of<detail::input_table_implementation<Ts...>, U<Ts...>>::value);
+            static_assert(std::is_base_of<detail::output_table_implementation<Ts...>, V<Ts...>>::value);
+
+            using row_type = std::tuple<Ts...>;
+
+            row_type x;
+            bool x_more = p_lhs.next(x);
+            row_type y;
+            bool y_more = p_rhs.next(y);
+
+            row_type z;
+            while (x_more && y_more)
+            {
+                if (p_less(x, y))
+                {
+                    p_res << x;
+                    x_more = p_lhs.next(x);
+                    continue;
+                }
+                if (p_less(y, x))
+                {
+                    p_res << y;
+                    y_more = p_rhs.next(y);
+                    continue;
+                }
+                p_combine(x, y, z);
+                p_res << z;
+                x_more = p_lhs.next(x);
+                y_more = p_rhs.next(y);
+            }
+            while (x_more)
+            {
+                p_res << x;
+                x_more = p_lhs.next(x);
+            }
+            while (y_more)
+            {
+                p_res << y;
+                y_more = p_rhs.next(y);
             }
         }
 

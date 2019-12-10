@@ -1,70 +1,103 @@
 #include "varoom/command.hpp"
-#include "varoom/seq/locus_stream.hpp"
 #include "varoom/util/files.hpp"
-#include "varoom/util/typed_tsv.hpp"
+#include "varoom/util/subtext.hpp"
+#include "varoom/util/table.hpp"
+#include "varoom/klbam/types.hpp"
 
 #include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace boost;
 using namespace varoom;
-using namespace varoom::seq;
+using namespace varoom::klbam;
 
 namespace // anonymous
 {
     typedef vector<string> strings;
 
-    string tabs(initializer_list<const char*> p_parts)
+    template <int I>
+    void add(const counts_type& p_lhs, const counts_type& p_rhs, counts_type& p_res)
     {
-        string s;
-        for (auto i = p_parts.begin(); i != p_parts.end(); ++i)
-        {
-            if (s.size() > 0)
-            {
-                s.push_back('\t');
-            }
-            s.insert(s.size(), *i);
-        }
-        return s;
+        std::get<I>(p_res) = std::get<I>(p_lhs) + std::get<I>(p_rhs);
     }
 
-    typedef pair<string,size_t> seq_and_count;
-    typedef vector<seq_and_count> seq_and_count_list;
-
-    struct counts
+    void parse_other(const string& p_str, map<string,size_t>& p_res)
     {
-        size_t nA;
-        size_t nC;
-        size_t nG;
-        size_t nT;
-        map<string,size_t> indels;
-
-        counts()
-            : nA(0), nC(0), nG(0), nT(0)
-        { }
-
-        counts(size_t p_nA, size_t p_nC, size_t p_nG, size_t p_nT, const seq_and_count_list& p_indels)
-            : nA(p_nA), nC(p_nC), nG(p_nG), nT(p_nT)
+        subtext s(p_str);
+        vector<subtext> ps;
+        vector<subtext> qs;
+        s.split(';', ps);
+        for (size_t i = 0; i < ps.size(); ++i)
         {
-            for (auto itr = p_indels.begin(); itr != p_indels.end(); ++itr)
+            ps[i].split('=', qs);
+            if (qs.size() != 2)
             {
-                indels[itr->first] = itr->second;
+                throw std::runtime_error("bad other string: " + p_str);
             }
+            p_res[qs[0]] += boost::lexical_cast<size_t>(boost::make_iterator_range(qs[1].first, qs[1].second));
+        }
+    }
+
+    string serialize_other(const map<string,size_t>& p_oth)
+    {
+        string res;
+        for (auto itr = p_oth.begin(); itr != p_oth.end(); ++itr)
+        {
+            if (res.size() > 0)
+            {
+                res.push_back(';');
+            }
+            string s = itr->first + string("=") + boost::lexical_cast<string>(itr->second);
+            res.insert(res.end(), s.begin(), s.end());
+        }
+        return res;
+    }
+
+    string merge_other(const string& p_lhs, const string& p_rhs)
+    {
+        if (p_rhs.size() == 0)
+        {
+            return p_lhs;
+        }
+        if (p_lhs.size() == 0)
+        {
+            return p_rhs;
         }
 
-        counts& operator+=(const counts& p_other)
+        map<string,size_t> m;
+        parse_other(p_lhs, m);
+        parse_other(p_rhs, m);
+        return serialize_other(m);
+    }
+
+    bool row_less(const counts_type& p_lhs, const counts_type& p_rhs)
+    {
+        if (std::get<counts::chr>(p_lhs) < std::get<counts::chr>(p_rhs))
         {
-            nA += p_other.nA;
-            nC += p_other.nC;
-            nG += p_other.nG;
-            nT += p_other.nT;
-            for (auto itr = p_other.indels.begin(); itr != p_other.indels.end(); ++itr)
-            {
-                indels[itr->first] += itr->second;
-            }
-            return *this;
+            return true;
         }
-    };
+        if (std::get<counts::chr>(p_rhs) < std::get<counts::chr>(p_lhs))
+        {
+            return false;
+        }
+        return std::get<counts::pos>(p_lhs) < std::get<counts::pos>(p_rhs);
+    }
+
+    void merge_rows(const counts_type& p_lhs, const counts_type& p_rhs, counts_type& p_res)
+    {
+        std::get<counts::chr>(p_res) = std::get<counts::chr>(p_lhs);
+        std::get<counts::pos>(p_res) = std::get<counts::pos>(p_lhs);
+        add<counts::nA>(p_lhs, p_rhs, p_res);
+        add<counts::nC>(p_lhs, p_rhs, p_res);
+        add<counts::nG>(p_lhs, p_rhs, p_res);
+        add<counts::nT>(p_lhs, p_rhs, p_res);
+        add<counts::nN>(p_lhs, p_rhs, p_res);
+        add<counts::nX0>(p_lhs, p_rhs, p_res);
+        add<counts::nX1>(p_lhs, p_rhs, p_res);
+        add<counts::nI>(p_lhs, p_rhs, p_res);
+        add<counts::nD>(p_lhs, p_rhs, p_res);
+        std::get<counts::oth>(p_res) = merge_other(std::get<counts::oth>(p_lhs), std::get<counts::oth>(p_rhs));
+    }
 
     class merge_counts_command : public varoom::command
     {
@@ -78,66 +111,24 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            map<locus_id,counts> res;
-
-            vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]"};
+            counts_table tbl;
+            counts_table tmp;
 
             for (size_t n = 0; n < m_input_filenames.size(); ++n)
             {
+                tmp.clear();
                 input_file_holder_ptr inp = files::in(m_input_filenames[n]);
-                locus_id prev;
-                bool first = true;
-                for (auto t = typed_tsv_reader(**inp, types); t.more(); ++t)
-                {
-                    const typed_tsv_row& r = *t;
-                    locus_id loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        if (!(prev < loc))
-                        {
-                            std::cerr << prev.chr() << ':' << prev.pos() << " !< " << loc.chr() << ":" << loc.pos() << std::endl;
-                            throw std::runtime_error("loci out of order!");
-                        }
-                    }
-                    prev = loc;
-                    res[loc] += counts(any_cast<uint64_t>(r[2]), any_cast<uint64_t>(r[3]),
-                                       any_cast<uint64_t>(r[4]), any_cast<uint64_t>(r[5]),
-                                       any_cast<const seq_and_count_list&>(r[6]));
-                }
+                counts_istream_reader lhs(**inp, true);
+                counts_read_iterator rhs(tbl);
+                counts_write_iterator res(tmp);
+                std::function<bool(const counts_type&,const counts_type&)> l = row_less;
+                std::function<void(const counts_type&,const counts_type&,counts_type&)> f = merge_rows;
+                table::merge(lhs, rhs, res, l, f);
+                std::swap(tmp, tbl);
             }
-
-            vector<string> type_names{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]"};
 
             output_file_holder_ptr outp = files::out(m_output_filename);
-            ostream& out = **outp;
-            out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indels"}) << endl;
-            const tsv_column_type& ind = *tsv_column_type::get("[str=uint]");
-            seq_and_count_list scl;
-            string scl_str;
-            for (auto i = res.begin(); i != res.end(); ++i)
-            {
-                const string& chr = i->first.chr();
-                const uint32_t& pos = i->first.pos();
-
-                scl.clear();
-                for (auto j = i->second.indels.begin(); j != i->second.indels.end(); ++j)
-                {
-                    scl.push_back(*j);
-                }
-                ind.unmake(tsv_column_value(scl), scl_str);
-
-                out << chr << '\t' << pos
-                    << '\t' << i->second.nA
-                    << '\t' << i->second.nC
-                    << '\t' << i->second.nG
-                    << '\t' << i->second.nT
-                    << '\t' << scl_str
-                    << endl;
-            }
+            table::write(**outp, tbl, counts::labels());
         }
 
     private:

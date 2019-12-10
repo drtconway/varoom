@@ -284,19 +284,7 @@ namespace // anonymous
                 }
             }
 
-            std::sort(rows.begin(), rows.end(), [](const counts_type& p_lhs, const counts_type& p_rhs) {
-
-                    const std::string& lhs_chr = std::get<counts::chr>(p_lhs);
-                    const std::string& rhs_chr = std::get<counts::chr>(p_rhs);
-                    if (locus_ordering::equal(lhs_chr, rhs_chr))
-                    {
-                        return p_lhs < p_rhs;
-                    }
-                    else
-                    {
-                        return locus_ordering::less(lhs_chr, rhs_chr);
-                    }
-            });
+            std::sort(rows.begin(), rows.end());
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
             table::write(out, rows, counts::labels());
