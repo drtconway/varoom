@@ -2,10 +2,12 @@
 #include "varoom/command.hpp"
 #include "varoom/sam.hpp"
 #include "varoom/sam/pileup.hpp"
-#include "varoom/seq/locus_stream.hpp"
+#include "varoom/seq/locus_ordering.hpp"
 #include "varoom/util/files.hpp"
 #include "varoom/util/text.hpp"
-#include "varoom/util/typed_tsv.hpp"
+#include "varoom/util/tsv.hpp"
+#include "varoom/util/table.hpp"
+#include "varoom/klbam/types.hpp"
 
 #include <initializer_list>
 #include <tuple>
@@ -14,6 +16,8 @@ using namespace std;
 using namespace boost;
 using namespace varoom;
 using namespace varoom::seq;
+using namespace varoom::klbam;
+
 
 namespace // anonymous
 {
@@ -23,14 +27,13 @@ namespace // anonymous
 
     void read_bed_file(const string& p_filename, regions& p_res)
     {
-        const tsv_column_type& ut = *tsv_column_type::get("uint");
         input_file_holder_ptr inp = files::in(p_filename);
         for (tsv_reader in(**inp); in.more(); ++in)
         {
             const tsv_row& r = *in;
             region v;
-            v.first = any_cast<uint64_t>(ut.make(r[1]));
-            v.second = any_cast<uint64_t>(ut.make(r[2]));
+            v.first = r.get<uint32_t>(1);
+            v.second = r.get<uint32_t>(2);
             p_res[string(r[0])].push_back(v);
         }
 
@@ -97,15 +100,11 @@ namespace // anonymous
     }
 
 
-    typedef pair<string,size_t> seq_and_count;
-    typedef vector<seq_and_count> seq_and_count_list;
-    typedef std::tuple<locus_id,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,string> counts_row;
-
     class pileup_holder : public varoom::sam_pileup
     {
     public:
-        pileup_holder(vector<counts_row>& p_out, const regions& p_reg)
-            : chr("<unknown>"), pos(0), out(p_out), reg(p_reg), ind(*tsv_column_type::get("[str=uint]"))
+        pileup_holder(vector<varoom::klbam::counts_type>& p_out, const regions& p_reg)
+            : chr("<unknown>"), pos(0), out(p_out), reg(p_reg)
         {
         }
 
@@ -132,58 +131,71 @@ namespace // anonymous
                 return;
             }
 
-            size_t nA = 0;
-            size_t nC = 0;
-            size_t nG = 0;
-            size_t nT = 0;
-            size_t nN = 0;
-            size_t nX0 = 0;
-            size_t nX1 = 0;
-            seq_and_count_list nOther;
+            counts_type row(chr, pos, 0, 0, 0, 0, 0, 0, 0, 0, 0, "");
+            map<std::string,size_t> nOther;
             for (auto k = counts.begin(); k != counts.end(); ++k)
             {
                 const string& seq = k->first;
                 const size_t& cnt = k->second;
                 if (seq == "A")
                 {
-                    nA = cnt;
+                    std::get<counts::nA>(row) += cnt;
                     continue;
                 }
                 if (seq == "C")
                 {
-                    nC = cnt;
+                    std::get<counts::nC>(row) += cnt;
                     continue;
                 }
                 if (seq == "G")
                 {
-                    nG = cnt;
+                    std::get<counts::nG>(row) += cnt;
                     continue;
                 }
                 if (seq == "T")
                 {
-                    nT = cnt;
+                    std::get<counts::nT>(row) += cnt;
                     continue;
                 }
                 if (seq == "N")
                 {
-                    nN = cnt;
+                    std::get<counts::nN>(row) += cnt;
                     continue;
                 }
                 if (seq == ">")
                 {
-                    nX0 = cnt;
+                    std::get<counts::nX0>(row) += cnt;
                     continue;
                 }
                 if (seq == "<")
                 {
-                    nX1 = cnt;
+                    std::get<counts::nX1>(row) += cnt;
                     continue;
                 }
-                nOther.push_back(pair<string,size_t>(seq, cnt));
+                if (seq == "I")
+                {
+                    std::get<counts::nI>(row) += cnt;
+                    continue;
+                }
+                if (seq == "D")
+                {
+                    std::get<counts::nD>(row) += cnt;
+                    continue;
+                }
+                nOther[seq] += cnt;
             }
 
-            ind.unmake(tsv_column_value(nOther), other);
-            counts_row row(locus_id(chr, pos), nA, nC, nG, nT, nN, nX0, nX1, other);
+            other.clear();
+            for (auto j = nOther.begin(); j != nOther.end(); ++j)
+            {
+                std::string v = j->first + std::string("=") + boost::lexical_cast<std::string>(j->second);
+                if (other.size() > 0)
+                {
+                    other.push_back(';');
+                }
+                other.insert(other.end(), v.begin(), v.end());
+            }
+            std::get<counts::oth>(row) = std::move(other);
             out.push_back(row);
 
             chr = p_chr;
@@ -194,9 +206,8 @@ namespace // anonymous
 
         string chr;
         uint32_t pos;
-        vector<counts_row>& out;
+        vector<counts_type>& out;
         const regions& reg;
-        const tsv_column_type& ind;
         map<string,size_t> counts;
         string other;
     };
@@ -245,7 +256,7 @@ namespace // anonymous
                 use_sam = false;
             }
             
-            vector<counts_row> rows;
+            counts_table rows;
             pileup_holder ph(rows, m_regions);
             if (use_sam)
             {
@@ -273,33 +284,22 @@ namespace // anonymous
                 }
             }
 
-            std::sort(rows.begin(), rows.end());
+            std::sort(rows.begin(), rows.end(), [](const counts_type& p_lhs, const counts_type& p_rhs) {
+
+                    const std::string& lhs_chr = std::get<counts::chr>(p_lhs);
+                    const std::string& rhs_chr = std::get<counts::chr>(p_rhs);
+                    if (locus_ordering::equal(lhs_chr, rhs_chr))
+                    {
+                        return p_lhs < p_rhs;
+                    }
+                    else
+                    {
+                        return locus_ordering::less(lhs_chr, rhs_chr);
+                    }
+            });
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
-            out << text::tabs({"chr", "pos", "nA", "nC", "nG", "nT", "nN", "nX0", "nX1", "indel"}) << endl;
-            for (size_t i = 0; i < rows.size(); ++i)
-            {
-                const counts_row& row = rows[i];
-                const locus_id& loc = std::get<0>(row);
-                const uint32_t& nA = std::get<1>(row);
-                const uint32_t& nC = std::get<2>(row);
-                const uint32_t& nG = std::get<3>(row);
-                const uint32_t& nT = std::get<4>(row);
-                const uint32_t& nN = std::get<5>(row);
-                const uint32_t& nX0 = std::get<6>(row);
-                const uint32_t& nX1 = std::get<7>(row);
-                const string& nOther = std::get<8>(row);
-                out << loc.chr() << '\t' << loc.pos()
-                    << '\t' << nA
-                    << '\t' << nC
-                    << '\t' << nG
-                    << '\t' << nT
-                    << '\t' << nN
-                    << '\t' << nX0
-                    << '\t' << nX1
-                    << '\t' << nOther
-                    << endl;
-            }
+            table::write(out, rows, counts::labels());
 
         }
 

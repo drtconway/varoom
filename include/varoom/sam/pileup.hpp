@@ -63,6 +63,7 @@ namespace varoom
                     {
                         std::string q = std::string("^") + std::string(p_seq.begin() + i, p_seq.begin() + i + op.second);
                         std::uint32_t p = p_pos + j - 1;
+                        m_pileup[p][atom('I')] += 1;
                         m_pileup[p][q] += 1;
                         i += op.second;
                         break;
@@ -71,6 +72,7 @@ namespace varoom
                     {
                         std::string q = std::string("*") + boost::lexical_cast<std::string>(op.second);
                         std::uint32_t p = p_pos + j - 1;
+                        m_pileup[p][atom('D')] += 1;
                         m_pileup[p][q] += 1;
                         j += op.second;
                         break;

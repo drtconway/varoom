@@ -125,6 +125,7 @@ namespace varoom
                 size_t n = 0;
                 for (auto i = p_labels.begin(); i != p_labels.end(); ++i, ++n)
                 {
+                    // nothing - we're just counting.
                 }
                 if (n != std::tuple_size<row>::value)
                 {
@@ -234,6 +235,9 @@ namespace varoom
     class table
     {
     public:
+        template <typename... Ts>
+        using basic_inmemory_table = detail::inmemory_table<Ts...>;
+
         template <std::size_t I0, std::size_t I1, std::size_t O = 0,
                   typename... Ts, template <typename...> class T,
                   typename... Us, template <typename...> class U>
@@ -294,6 +298,26 @@ namespace varoom
             {
                 p_func(x, y);
                 p_dest << y;
+            }
+        }
+
+        template <typename... Ts>
+        static void write(std::ostream& p_out, const basic_inmemory_table<Ts...>& p_table)
+        {
+            detail::streamed_output_table<Ts...> out(p_out);
+            for (auto itr = p_table.begin(); itr != p_table.end(); ++itr)
+            {
+                out << *itr;
+            }
+        }
+
+        template <typename... Ts>
+        static void write(std::ostream& p_out, const basic_inmemory_table<Ts...>& p_table, std::initializer_list<std::string> p_labels)
+        {
+            detail::streamed_output_table<Ts...> out(p_out, p_labels);
+            for (auto itr = p_table.begin(); itr != p_table.end(); ++itr)
+            {
+                out << *itr;
             }
         }
     };
