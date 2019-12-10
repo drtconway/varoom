@@ -103,7 +103,7 @@ namespace // anonymous
     class pileup_holder : public varoom::sam_pileup
     {
     public:
-        pileup_holder(vector<varoom::klbam::counts_type>& p_out, const regions& p_reg)
+        pileup_holder(vector<counts::tuple>& p_out, const regions& p_reg)
             : chr("<unknown>"), pos(0), out(p_out), reg(p_reg)
         {
         }
@@ -118,7 +118,7 @@ namespace // anonymous
 
             if (p_chr == chr && p_pos == pos)
             {
-                counts[p_base] = p_count;
+                base_counts[p_base] = p_count;
                 return;
             }
 
@@ -126,14 +126,14 @@ namespace // anonymous
             {
                 chr = p_chr;
                 pos = p_pos;
-                counts.clear();
-                counts[p_base] = p_count;
+                base_counts.clear();
+                base_counts[p_base] = p_count;
                 return;
             }
 
-            counts_type row(chr, pos, 0, 0, 0, 0, 0, 0, 0, 0, 0, "");
+            counts::tuple row(chr, pos, 0, 0, 0, 0, 0, 0, 0, 0, 0, "");
             map<std::string,size_t> nOther;
-            for (auto k = counts.begin(); k != counts.end(); ++k)
+            for (auto k = base_counts.begin(); k != base_counts.end(); ++k)
             {
                 const string& seq = k->first;
                 const size_t& cnt = k->second;
@@ -200,15 +200,15 @@ namespace // anonymous
 
             chr = p_chr;
             pos = p_pos;
-            counts.clear();
-            counts[p_base] = p_count;
+            base_counts.clear();
+            base_counts[p_base] = p_count;
         }
 
         string chr;
         uint32_t pos;
-        vector<counts_type>& out;
+        vector<counts::tuple>& out;
         const regions& reg;
-        map<string,size_t> counts;
+        map<string,size_t> base_counts;
         string other;
     };
 
@@ -256,7 +256,7 @@ namespace // anonymous
                 use_sam = false;
             }
             
-            counts_table rows;
+            counts::table rows;
             pileup_holder ph(rows, m_regions);
             if (use_sam)
             {
@@ -287,7 +287,7 @@ namespace // anonymous
             std::sort(rows.begin(), rows.end());
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
-            table::write(out, rows, counts::labels());
+            counts::write(out, rows, counts::labels());
 
         }
 

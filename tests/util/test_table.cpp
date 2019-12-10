@@ -174,11 +174,11 @@ BOOST_AUTO_TEST_CASE( table_map_1 )
     tbl_out v(u);
 
     std::function<void(const tbl_in::row&, tbl_out::row&)> f = [](const tbl_in::row& p_x, tbl_out::row& p_y) {
-        varoom::table::copy<0,4>(p_x, p_y);
+        varoom::table_utils::copy<0,4>(p_x, p_y);
         std::get<4>(p_y) = std::get<2>(p_x) - std::get<1>(p_x);
     };
 
-    varoom::table::map(f, t, v);
+    varoom::table_utils::map(f, t, v);
 
     BOOST_REQUIRE_EQUAL(u.size(), 10);
 }

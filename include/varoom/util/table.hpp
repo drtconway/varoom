@@ -234,24 +234,8 @@ namespace varoom
     }
     // namespace detail
 
-    class table
+    struct table_utils
     {
-    public:
-        template <typename... Ts>
-        using basic_istream_table = detail::streamed_input_table<Ts...>;
-
-        template <typename... Ts>
-        using basic_ostream_table = detail::streamed_output_table<Ts...>;
-
-        template <typename... Ts>
-        using basic_inmemory_table = detail::inmemory_table<Ts...>;
-
-        template<typename... Ts>
-        using basic_read_iterator = detail::streamed_inmemory_table<Ts...>;
-
-        template<typename... Ts>
-        using basic_write_iterator = detail::streamed_outmemory_table<Ts...>;
-
         template <std::size_t I0, std::size_t I1, std::size_t O = 0,
                   typename... Ts, template <typename...> class T,
                   typename... Us, template <typename...> class U>
@@ -278,21 +262,6 @@ namespace varoom
 
             std::get<I0+O>(p_dest) = std::get<I0>(p_src);
             copy<I0+1, I1, O>(p_src, p_dest);
-        }
-
-        template <typename... Ts, template <typename...> class T>
-        static void for_each(T<Ts...>& p_src, std::function<void(const std::tuple<Ts...>&)> p_func)
-        {
-            static_assert(std::is_base_of<detail::input_table_implementation<Ts...>, T<Ts...>>::value);
-
-            using row_in = std::tuple<Ts...>;
-
-            row_in x;
-
-            while(p_src.next(x))
-            {
-                p_func(x);
-            }
         }
 
         template <typename... Ts, template <typename...> class T, template <typename...> class U, template <typename...> class V>
@@ -343,6 +312,21 @@ namespace varoom
             }
         }
 
+        template <typename... Ts, template <typename...> class T>
+        static void for_each(T<Ts...>& p_src, std::function<void(const std::tuple<Ts...>&)> p_func)
+        {
+            static_assert(std::is_base_of<detail::input_table_implementation<Ts...>, T<Ts...>>::value);
+
+            using row_in = std::tuple<Ts...>;
+
+            row_in x;
+
+            while(p_src.next(x))
+            {
+                p_func(x);
+            }
+        }
+
         template <typename... Ts, template <typename...> class T,
                   typename... Us, template <typename...> class U>
         static void map(std::function<void(const std::tuple<Ts...>&,std::tuple<Us...>&)> p_func, T<Ts...>& p_src, U<Us...>& p_dest)
@@ -363,8 +347,25 @@ namespace varoom
             }
         }
 
-        template <typename... Ts>
-        static void write(std::ostream& p_out, const basic_inmemory_table<Ts...>& p_table)
+    };
+
+    template <typename... Ts>
+    class table
+    {
+    public:
+        using tuple_type = std::tuple<Ts...>;
+
+        using basic_istream_table = detail::streamed_input_table<Ts...>;
+
+        using basic_ostream_table = detail::streamed_output_table<Ts...>;
+
+        using basic_inmemory_table = detail::inmemory_table<Ts...>;
+
+        using basic_read_iterator = detail::streamed_inmemory_table<Ts...>;
+
+        using basic_write_iterator = detail::streamed_outmemory_table<Ts...>;
+
+        static void write(std::ostream& p_out, const basic_inmemory_table& p_table)
         {
             detail::streamed_output_table<Ts...> out(p_out);
             for (auto itr = p_table.begin(); itr != p_table.end(); ++itr)
@@ -373,8 +374,7 @@ namespace varoom
             }
         }
 
-        template <typename... Ts>
-        static void write(std::ostream& p_out, const basic_inmemory_table<Ts...>& p_table, std::initializer_list<std::string> p_labels)
+        static void write(std::ostream& p_out, const basic_inmemory_table& p_table, std::initializer_list<std::string> p_labels)
         {
             detail::streamed_output_table<Ts...> out(p_out, p_labels);
             for (auto itr = p_table.begin(); itr != p_table.end(); ++itr)
@@ -382,6 +382,7 @@ namespace varoom
                 out << *itr;
             }
         }
+
     };
 
 }

@@ -16,7 +16,7 @@ namespace // anonymous
     typedef vector<string> strings;
 
     template <int I>
-    void add(const counts_type& p_lhs, const counts_type& p_rhs, counts_type& p_res)
+    void add(const counts::tuple& p_lhs, const counts::tuple& p_rhs, counts::tuple& p_res)
     {
         std::get<I>(p_res) = std::get<I>(p_lhs) + std::get<I>(p_rhs);
     }
@@ -70,7 +70,7 @@ namespace // anonymous
         return serialize_other(m);
     }
 
-    bool row_less(const counts_type& p_lhs, const counts_type& p_rhs)
+    bool row_less(const counts::tuple& p_lhs, const counts::tuple& p_rhs)
     {
         if (std::get<counts::chr>(p_lhs) < std::get<counts::chr>(p_rhs))
         {
@@ -83,7 +83,7 @@ namespace // anonymous
         return std::get<counts::pos>(p_lhs) < std::get<counts::pos>(p_rhs);
     }
 
-    void merge_rows(const counts_type& p_lhs, const counts_type& p_rhs, counts_type& p_res)
+    void merge_rows(const counts::tuple& p_lhs, const counts::tuple& p_rhs, counts::tuple& p_res)
     {
         std::get<counts::chr>(p_res) = std::get<counts::chr>(p_lhs);
         std::get<counts::pos>(p_res) = std::get<counts::pos>(p_lhs);
@@ -111,24 +111,25 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            counts_table tbl;
-            counts_table tmp;
+            std::function<bool(const counts::tuple&,const counts::tuple&)> l = row_less;
+            std::function<void(const counts::tuple&,const counts::tuple&,counts::tuple&)> f = merge_rows;
+
+            counts::table tbl;
+            counts::table tmp;
 
             for (size_t n = 0; n < m_input_filenames.size(); ++n)
             {
                 tmp.clear();
                 input_file_holder_ptr inp = files::in(m_input_filenames[n]);
-                counts_istream_reader lhs(**inp, true);
-                counts_read_iterator rhs(tbl);
-                counts_write_iterator res(tmp);
-                std::function<bool(const counts_type&,const counts_type&)> l = row_less;
-                std::function<void(const counts_type&,const counts_type&,counts_type&)> f = merge_rows;
-                table::merge(lhs, rhs, res, l, f);
+                counts::istream_reader lhs(**inp, true);
+                counts::read_iterator rhs(tbl);
+                counts::write_iterator res(tmp);
+                table_utils::merge(lhs, rhs, res, l, f);
                 std::swap(tmp, tbl);
             }
 
             output_file_holder_ptr outp = files::out(m_output_filename);
-            table::write(**outp, tbl, counts::labels());
+            counts::write(**outp, tbl, counts::labels());
         }
 
     private:

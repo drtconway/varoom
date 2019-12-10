@@ -29,16 +29,15 @@ namespace varoom
             }
         };
 
-        using counts_type = std::tuple<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
-        using counts_table = varoom::table::basic_inmemory_table<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
-        using counts_istream_reader = varoom::table::basic_istream_table<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
-        using counts_read_iterator = varoom::table::basic_read_iterator<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
-        using counts_write_iterator = varoom::table::basic_write_iterator<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
-        using counts_ostream_writer = varoom::table::basic_ostream_table<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>;
-        using scores_type = std::tuple<double,double>;
-
-        struct counts
+        struct counts :  varoom::table<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>
         {
+            using tuple = tuple_type;
+            using table = basic_inmemory_table;
+            using istream_reader = basic_istream_table;
+            using ostream_writer = basic_ostream_table;
+            using read_iterator = basic_read_iterator;
+            using write_iterator = basic_write_iterator;
+
             static constexpr std::size_t chr = 0;
             static constexpr std::size_t pos = 1;
             static constexpr std::size_t nA  = 2;
@@ -57,6 +56,9 @@ namespace varoom
                 return {"chr", "pos", "nA", "nC", "nG", "nT", "nN", "nX0", "nX1", "nI", "nD", "indels"};
             }
         };
+
+        using scores_table_type = varoom::table<chrom,uint32_t,double,double>;
+
     }
     // namespace klbam
 }
