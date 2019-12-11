@@ -29,6 +29,8 @@ namespace varoom
             }
         };
 
+        using locus = std::pair<chrom,uint32_t>;
+
         struct counts :  varoom::table<chrom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string>
         {
             using tuple = tuple_type;
@@ -57,7 +59,49 @@ namespace varoom
             }
         };
 
-        using scores_table_type = varoom::table<chrom,uint32_t,double,double>;
+        struct scores : varoom::table<chrom,uint32_t,double,double>
+        {
+            using tuple = tuple_type;
+            using table = basic_inmemory_table;
+            using istream_reader = basic_istream_table;
+            using ostream_writer = basic_ostream_table;
+            using read_iterator = basic_read_iterator;
+            using write_iterator = basic_write_iterator;
+
+            static constexpr std::size_t chr  = 0;
+            static constexpr std::size_t pos  = 1;
+            static constexpr std::size_t kld  = 2;
+            static constexpr std::size_t pval = 3;
+
+            static std::initializer_list<std::string> labels()
+            {
+                return {"chr", "pos", "kld", "pval"};
+            }
+        };
+
+        struct gamma : varoom::table<chrom,uint32_t,uint64_t,double,double,double,double,double>
+        {
+            using tuple = tuple_type;
+            using table = basic_inmemory_table;
+            using istream_reader = basic_istream_table;
+            using ostream_writer = basic_ostream_table;
+            using read_iterator = basic_read_iterator;
+            using write_iterator = basic_write_iterator;
+
+            static constexpr std::size_t chr   = 0;
+            static constexpr std::size_t pos   = 1;
+            static constexpr std::size_t n     = 2;
+            static constexpr std::size_t sx    = 3;
+            static constexpr std::size_t slx   = 4;
+            static constexpr std::size_t sxlx  = 5;
+            static constexpr std::size_t k     = 6;
+            static constexpr std::size_t theta = 7;
+
+            static std::initializer_list<std::string> labels()
+            {
+                return {"chr", "pos", "n", "sx", "slx", "sxlx", "k", "theta"};
+            }
+        };
 
     }
     // namespace klbam

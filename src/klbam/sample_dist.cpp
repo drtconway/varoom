@@ -1,8 +1,8 @@
 #include "varoom/command.hpp"
-#include "varoom/seq/locus_stream.hpp"
 #include "varoom/util/files.hpp"
 #include "varoom/util/text.hpp"
-#include "varoom/util/typed_tsv.hpp"
+#include "varoom/util/table.hpp"
+#include "varoom/klbam/types.hpp"
 
 #include <cmath>
 #include <initializer_list>
@@ -10,7 +10,7 @@
 using namespace std;
 using namespace boost;
 using namespace varoom;
-using namespace varoom::seq;
+using namespace varoom::klbam;
 
 namespace // anonymous
 {
@@ -33,6 +33,19 @@ namespace // anonymous
         return d;
     }
 
+    template <int I>
+    void add(const counts::tuple& p_lhs, const counts::tuple& p_rhs, vector<double>& p_glob, vector<double>& p_sampl)
+    {
+        uint32_t g = std::get<I>(p_lhs);
+        uint32_t s = std::get<I>(p_rhs);
+        if (s == 0)
+        {
+            return;
+        }
+        p_glob.push_back(g);
+        p_sampl.push_back(s);
+    }
+
     typedef pair<string,size_t> seq_and_count;
     typedef vector<seq_and_count> seq_and_count_list;
 
@@ -50,185 +63,73 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            output_file_holder_ptr outp = files::out(m_output_filename);
-            std::ostream& out = **outp;
-            out << text::tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel", "kld"}) << std::endl;
+            map<locus,counts::tuple> glob;
+            {
+                std::function<void(const counts::tuple&)> f = [glob] (const counts::tuple& p_counts) mutable {
+                    locus l(std::get<counts::chr>(p_counts), std::get<counts::pos>(p_counts));
+                    glob[l] = p_counts;
+                };
+                input_file_holder_ptr globp = files::in(m_global_filename);
+                counts::istream_reader g(**globp);
+                table_utils::for_each(g, f);
+            }
 
-            input_file_holder_ptr globp = files::in(m_global_filename);
             input_file_holder_ptr inp = files::in(m_input_filename);
+            counts::istream_reader in(**inp, true);
 
-            vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]"};
-            typed_tsv_reader glob(**globp, types);
-            typed_tsv_reader sample(**inp, types);
+            output_file_holder_ptr outp = files::out(m_output_filename);
+            scores::ostream_writer out(**outp, scores::labels());
 
-            std::vector<double> gProbs;
-            std::vector<double> sProbs;
+            std::function<void(const counts::tuple&, scores::tuple&)> f = [glob] (const counts::tuple& p_in, scores::tuple& p_out) {
 
-            locus_id gLoc;
-            if (glob.more())
-            {
-                const typed_tsv_row& gRow = *glob;
-                gLoc = locus_id(any_cast<const string&>(gRow[0]), any_cast<uint64_t>(gRow[1]));
-            }
-            locus_id sLoc;
-            if (sample.more())
-            {
-                const typed_tsv_row& sRow = *sample;
-                sLoc = locus_id(any_cast<const string&>(sRow[0]), any_cast<uint64_t>(sRow[1]));
-            }
+                locus l(std::get<counts::chr>(p_in), std::get<counts::pos>(p_in));
 
-            while (glob.more() && sample.more())
-            {
-                if (gLoc < sLoc)
+                std::get<scores::chr>(p_out) = l.first;
+                std::get<scores::pos>(p_out) = l.second;
+
+                auto gitr = glob.find(l);
+                if (gitr == glob.end())
                 {
-                    ++glob;
-                    if (glob.more())
-                    {
-                        const typed_tsv_row& gRow = *glob;
-                        gLoc = locus_id(any_cast<const string&>(gRow[0]), any_cast<uint64_t>(gRow[1]));
-                    }
-                    continue;
+                    std::get<scores::kld>(p_out) = 0.0;
+                    std::get<scores::pval>(p_out) = 1.0;
+                    return;
                 }
 
-                if (sLoc < gLoc)
+                std::vector<double> g;
+                std::vector<double> s;
+
+                add<counts::nA>(gitr->second, p_in, g, s);
+                add<counts::nC>(gitr->second, p_in, g, s);
+                add<counts::nG>(gitr->second, p_in, g, s);
+                add<counts::nT>(gitr->second, p_in, g, s);
+                add<counts::nI>(gitr->second, p_in, g, s);
+                add<counts::nD>(gitr->second, p_in, g, s);
+                //add<counts::nN>(gitr->second, p_in, g, s);
+                //add<counts::nX0>(gitr->second, p_in, p_res);
+                //add<counts::nX1>(gitr->second, p_in, p_res);
+
+                double gt = 0;
+                double st = 0;
+                for (size_t i = 0; i < g.size(); ++i)
                 {
-                    // If the locus isn't in the global table,
-                    // then this is the only representative of the locus
-                    // so the divergence is zero.
-                    //
-                    output_row(out, *sample, 0.0);
-                    ++sample;
-                    if (sample.more())
-                    {
-                        const typed_tsv_row& sRow = *sample;
-                        sLoc = locus_id(any_cast<const string&>(sRow[0]), any_cast<uint64_t>(sRow[1]));
-                    }
-                    continue;
+                    gt += g[i];
+                    st += s[i];
+                }
+                for (size_t i = 0; i < g.size(); ++i)
+                {
+                    g[i] /= gt;
+                    s[i] /= gt;
                 }
 
-                const typed_tsv_row& gRow = *glob;
-                gProbs.clear();
-                gProbs.push_back(any_cast<uint64_t>(gRow[2]));
-                gProbs.push_back(any_cast<uint64_t>(gRow[3]));
-                gProbs.push_back(any_cast<uint64_t>(gRow[4]));
-                gProbs.push_back(any_cast<uint64_t>(gRow[5]));
+                double k = kl_divergence(s, g);
 
-                const typed_tsv_row& sRow = *sample;
-                sProbs.clear();
-                sProbs.push_back(any_cast<uint64_t>(sRow[2]));
-                sProbs.push_back(any_cast<uint64_t>(sRow[3]));
-                sProbs.push_back(any_cast<uint64_t>(sRow[4]));
-                sProbs.push_back(any_cast<uint64_t>(sRow[5]));
-
-                const seq_and_count_list& gIndels = any_cast<const seq_and_count_list&>(gRow[6]);
-                const seq_and_count_list& sIndels = any_cast<const seq_and_count_list&>(sRow[6]);
-
-                auto gItr = gIndels.begin();
-                auto sItr = sIndels.begin();
-                while (gItr != gIndels.end() && sItr != sIndels.end())
-                {
-                    if (*gItr < *sItr)
-                    {
-                        ++gItr;
-                        continue;
-                    }
-
-                    if (*sItr < *gItr)
-                    {
-                        // This shouldn't really happen, in the idealised setting where
-                        // all samples are entailed in the global counts, but pragmatically
-                        // we can assume that this is the only instance of the indel so the
-                        // sample count == global count
-                        //
-                        gProbs.push_back(sItr->second);
-                        sProbs.push_back(sItr->second);
-                        ++sItr;
-                        continue;
-                    }
-
-                    gProbs.push_back(gItr->second);
-                    ++gItr;
-                    sProbs.push_back(sItr->second);
-                    ++sItr;
-                }
-
-                // If there are any extra sample counts,
-                // they're equivalent to the case above.
-                //
-                while (sItr != sIndels.end())
-                {
-                    gProbs.push_back(sItr->second);
-                    sProbs.push_back(sItr->second);
-                    ++sItr;
-                }
-
-                // Finally, to account for the fact that coverage variation
-                // does represent real variablility, we include a "null"
-                // observation category with a global count of 1 and  a
-                // sample count of 1. This vastly reduces the probability
-                // of all samples having the same KL-divergence which leads
-                // to problems estimating gamma.
-                //
-                //gProbs.push_back(1);
-                //sProbs.push_back(1);
-
-                double gTot = 0;
-                double sTot = 0;
-                for (size_t i = 0; i < gProbs.size(); ++i)
-                {
-                    gTot += gProbs[i];
-                    sTot += sProbs[i];
-                }
-                for (size_t i = 0; i < gProbs.size(); ++i)
-                {
-                    gProbs[i] /= gTot;
-                    sProbs[i] /= sTot;
-                }
-
-                double kld = kl_divergence(sProbs, gProbs);
-                output_row(out, sRow, kld);
-
-                ++glob;
-                if (glob.more())
-                {
-                    const typed_tsv_row& gRow = *glob;
-                    gLoc = locus_id(any_cast<const string&>(gRow[0]), any_cast<uint64_t>(gRow[1]));
-                }
-
-                ++sample;
-                if (sample.more())
-                {
-                    const typed_tsv_row& sRow = *sample;
-                    sLoc = locus_id(any_cast<const string&>(sRow[0]), any_cast<uint64_t>(sRow[1]));
-                }
-            }
-
-            while (sample.more())
-            {
-                output_row(out, *sample, 0.0);
-                ++sample;
-            }
+                std::get<scores::kld>(p_out) = k;
+                std::get<scores::pval>(p_out) = 1.0;
+            };
+            table_utils::map(f, in, out);
         }
 
     private:
-        static void output_row(ostream& p_out, const typed_tsv_row& p_row, double kld)
-        {
-            const tsv_column_type& ind = *tsv_column_type::get("[str=uint]");
-
-            string ind_str;
-            ind.unmake(p_row[6], ind_str);
-
-            p_out << any_cast<const string&>(p_row[0])
-                  << '\t' << any_cast<uint64_t>(p_row[1])
-                  << '\t' << any_cast<uint64_t>(p_row[2])
-                  << '\t' << any_cast<uint64_t>(p_row[3])
-                  << '\t' << any_cast<uint64_t>(p_row[4])
-                  << '\t' << any_cast<uint64_t>(p_row[5])
-                  << '\t' << ind_str
-                  << '\t' << kld
-                  << endl;
-        }
-
         const string m_global_filename;
         const string m_input_filename;
         const string m_output_filename;

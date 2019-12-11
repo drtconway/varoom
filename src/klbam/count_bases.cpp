@@ -288,7 +288,6 @@ namespace // anonymous
             output_file_holder_ptr outp = files::out(m_output_filename);
             ostream& out = **outp;
             counts::write(out, rows, counts::labels());
-
         }
 
     private:
