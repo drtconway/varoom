@@ -35,7 +35,7 @@ namespace // anonymous
             {
                 // Process KL-Divergence scores to produce estimates
                 //
-                std::function<void(const scores::tuple&)> f = [klds] (const scores::tuple& p_item) mutable {
+                std::function<void(const scores::tuple&)> f = [&] (const scores::tuple& p_item) mutable {
                     locus l(std::get<scores::chr>(p_item), std::get<scores::pos>(p_item));
                     klds[l].push_back(std::get<scores::kld>(p_item));
                 };
@@ -51,7 +51,7 @@ namespace // anonymous
             {
                 // Merge estimates
                 //
-                std::function<void(const gamma::tuple&)> f = [klds] (const gamma::tuple& p_item) mutable {
+                std::function<void(const gamma::tuple&)> f = [&] (const gamma::tuple& p_item) mutable {
                     locus l(std::get<gamma::chr>(p_item), std::get<gamma::pos>(p_item));
                     klds[l] += gamma_estimator(std::get<gamma::n>(p_item),
                                                std::get<gamma::sx>(p_item), std::get<gamma::slx>(p_item),

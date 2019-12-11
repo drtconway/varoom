@@ -1,7 +1,9 @@
 #include "varoom/command.hpp"
 #include "varoom/seq/locus_stream.hpp"
-#include "varoom/util/typed_tsv.hpp"
 #include "varoom/util/files.hpp"
+#include "varoom/util/gamma_estimator.hpp"
+#include "varoom/util/table.hpp"
+#include "varoom/klbam/types.hpp"
 
 #include <cmath>
 #include <initializer_list>
@@ -11,27 +13,10 @@ using namespace std;
 using namespace boost;
 using namespace boost::math;
 using namespace varoom;
-using namespace varoom::seq;
+using namespace varoom::klbam;
 
 namespace // anonymous
 {
-    string tabs(initializer_list<const char*> p_parts)
-    {
-        string s;
-        for (auto i = p_parts.begin(); i != p_parts.end(); ++i)
-        {
-            if (s.size() > 0)
-            {
-                s.push_back('\t');
-            }
-            s.insert(s.size(), *i);
-        }
-        return s;
-    }
-
-    typedef pair<string,size_t> seq_and_count;
-    typedef vector<seq_and_count> seq_and_count_list;
-
     class sample_pval_command : public varoom::command
     {
     public:
@@ -46,58 +31,49 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            map<locus_id,pair<double,double>> gammas;
+            map<locus,pair<double,double>> gammas;
             {
-                vector<string> gamma_types{"str", "uint", "flt", "flt"};
-                input_file_holder_ptr gammap = files::in(m_gamma_filename);
-                for (typed_tsv_reader gam(**gammap, gamma_types); gam.more(); ++gam)
-                {
-                    const typed_tsv_row& r = *gam;
-                    locus_id loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
-                    pair<double,double> v(any_cast<double>(r[2]), any_cast<double>(r[3]));
-                    gammas[loc] = v;
-                }
+                std::function<void(const gamma::tuple&)> f = [&] (const gamma::tuple& p_item) mutable {
+                    locus l(std::get<gamma::chr>(p_item), std::get<gamma::pos>(p_item));
+                    gamma_estimator g(std::get<gamma::n>(p_item),
+                                      std::get<gamma::sx>(p_item), std::get<gamma::slx>(p_item),
+                                      std::get<gamma::sxlx>(p_item));
+                    gammas[l] = g();
+                };
+                input_file_holder_ptr inp = files::in(m_gamma_filename);
+                gamma::istream_reader in(**inp, true);
+                table_utils::for_each(in, f);
             }
+
+            std::function<void(const scores::tuple&, scores::tuple&)> f = [&] (const scores::tuple& p_x, scores::tuple& p_y) {
+                locus l(std::get<scores::chr>(p_x), std::get<scores::pos>(p_x));
+
+                auto g_itr = gammas.find(l);
+                if (g_itr == gammas.end())
+                {
+                    throw std::runtime_error("locus not found");
+                }
+                const pair<double,double>& g = g_itr->second;
+                gamma_distribution<> G(g.first, g.second);
+
+                double kld = std::get<scores::kld>(p_x);
+                double pval = cdf(complement(G, kld));
+
+                std::get<scores::chr>(p_y) = l.first;
+                std::get<scores::pos>(p_y) = l.second;
+                std::get<scores::kld>(p_y) = kld;
+                std::get<scores::pval>(p_y) = pval;
+            };
 
             output_file_holder_ptr outp = files::out(m_output_filename);
-            std::ostream& out = **outp;
-            out << tabs({"chr", "pos", "nA", "nC", "nG", "nT", "indel", "kld", "pval"}) << std::endl;
+            scores::ostream_writer out(**outp, scores::labels());
 
             input_file_holder_ptr inp = files::in(m_input_filename);
-
-            vector<string> types{"str", "uint", "uint", "uint", "uint", "uint", "[str=uint]", "flt"};
-            for (typed_tsv_reader sample(**inp, types); sample.more(); ++sample)
-            {
-                const typed_tsv_row& r = *sample;
-                locus_id loc(any_cast<const string&>(r[0]), any_cast<uint64_t>(r[1]));
-                const pair<double,double>& gParams = gammas.find(loc)->second;
-                gamma_distribution<> G(gParams.first, gParams.second);
-                double kld = any_cast<double>(r[7]);
-                double pval = cdf(complement(G, kld));
-                output_row(out, r, pval);
-            }
+            scores::istream_reader in(**inp, true);
+            table_utils::map(f, in, out);
         }
 
     private:
-        static void output_row(ostream& p_out, const typed_tsv_row& p_row, double p_pval)
-        {
-            const tsv_column_type& ind = *tsv_column_type::get("[str=uint]");
-
-            string ind_str;
-            ind.unmake(p_row[6], ind_str);
-
-            p_out << any_cast<const string&>(p_row[0])
-                  << '\t' << any_cast<uint64_t>(p_row[1])
-                  << '\t' << any_cast<uint64_t>(p_row[2])
-                  << '\t' << any_cast<uint64_t>(p_row[3])
-                  << '\t' << any_cast<uint64_t>(p_row[4])
-                  << '\t' << any_cast<uint64_t>(p_row[5])
-                  << '\t' << ind_str
-                  << '\t' << any_cast<double>(p_row[7])
-                  << '\t' << p_pval
-                  << endl;
-        }
-
         const string m_gamma_filename;
         const string m_input_filename;
         const string m_output_filename;

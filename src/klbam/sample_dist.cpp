@@ -34,20 +34,21 @@ namespace // anonymous
     }
 
     template <int I>
-    void add(const counts::tuple& p_lhs, const counts::tuple& p_rhs, vector<double>& p_glob, vector<double>& p_sampl)
+    void add(const counts::tuple& p_lhs, const counts::tuple& p_rhs,
+             vector<double>& p_glob, vector<double>& p_sampl, double& p_gt, double& p_st)
     {
         uint32_t g = std::get<I>(p_lhs);
         uint32_t s = std::get<I>(p_rhs);
-        if (s == 0)
-        {
-            return;
-        }
-        p_glob.push_back(g);
-        p_sampl.push_back(s);
-    }
 
-    typedef pair<string,size_t> seq_and_count;
-    typedef vector<seq_and_count> seq_and_count_list;
+        p_gt += g;
+        p_st += s;
+
+        if (s > 0)
+        {
+            p_glob.push_back(g);
+            p_sampl.push_back(s);
+        }
+    }
 
     class sample_dist_command : public varoom::command
     {
@@ -65,12 +66,12 @@ namespace // anonymous
         {
             map<locus,counts::tuple> glob;
             {
-                std::function<void(const counts::tuple&)> f = [glob] (const counts::tuple& p_counts) mutable {
+                std::function<void(const counts::tuple&)> f = [&] (const counts::tuple& p_counts) mutable {
                     locus l(std::get<counts::chr>(p_counts), std::get<counts::pos>(p_counts));
                     glob[l] = p_counts;
                 };
                 input_file_holder_ptr globp = files::in(m_global_filename);
-                counts::istream_reader g(**globp);
+                counts::istream_reader g(**globp, true);
                 table_utils::for_each(g, f);
             }
 
@@ -96,29 +97,25 @@ namespace // anonymous
                 }
 
                 std::vector<double> g;
-                std::vector<double> s;
+                double gt = 0;
 
-                add<counts::nA>(gitr->second, p_in, g, s);
-                add<counts::nC>(gitr->second, p_in, g, s);
-                add<counts::nG>(gitr->second, p_in, g, s);
-                add<counts::nT>(gitr->second, p_in, g, s);
-                add<counts::nI>(gitr->second, p_in, g, s);
-                add<counts::nD>(gitr->second, p_in, g, s);
+                std::vector<double> s;
+                double st = 0;
+
+                add<counts::nA>(gitr->second, p_in, g, s, gt, st);
+                add<counts::nC>(gitr->second, p_in, g, s, gt, st);
+                add<counts::nG>(gitr->second, p_in, g, s, gt, st);
+                add<counts::nT>(gitr->second, p_in, g, s, gt, st);
+                add<counts::nI>(gitr->second, p_in, g, s, gt, st);
+                add<counts::nD>(gitr->second, p_in, g, s, gt, st);
                 //add<counts::nN>(gitr->second, p_in, g, s);
                 //add<counts::nX0>(gitr->second, p_in, p_res);
                 //add<counts::nX1>(gitr->second, p_in, p_res);
 
-                double gt = 0;
-                double st = 0;
-                for (size_t i = 0; i < g.size(); ++i)
-                {
-                    gt += g[i];
-                    st += s[i];
-                }
                 for (size_t i = 0; i < g.size(); ++i)
                 {
                     g[i] /= gt;
-                    s[i] /= gt;
+                    s[i] /= st;
                 }
 
                 double k = kl_divergence(s, g);
