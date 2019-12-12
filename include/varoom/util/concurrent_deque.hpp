@@ -11,7 +11,7 @@ namespace varoom
     class concurrent_deque
     {
     public:
-        concurrent_deque(const size_t& p_max_size)
+        concurrent_deque(size_t p_max_size = 0)
             : m_max_size(p_max_size), m_ended(false)
         {
         }
@@ -37,7 +37,7 @@ namespace varoom
                 throw std::runtime_error("cannot push on ended concurrent_deque");
             }
 
-            while (m_deque.size() >= m_max_size)
+            while (m_max_size > 0 && m_deque.size() >= m_max_size)
             {
                 m_producer_cond.wait(lk);
             }
@@ -58,7 +58,7 @@ namespace varoom
                 throw std::runtime_error("cannot push on ended concurrent_deque");
             }
 
-            while (m_deque.size() >= m_max_size)
+            while (m_max_size > 0 && m_deque.size() >= m_max_size)
             {
                 m_producer_cond.wait(lk);
             }
