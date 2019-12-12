@@ -43,7 +43,7 @@ namespace // anonymous
                 for (size_t n = 0; n < m_input_filenames.size(); ++n)
                 {
                     input_file_holder_ptr inp = files::in(m_input_filenames[n]);
-                    scores::istream_reader in(**inp);
+                    scores::istream_reader in(**inp, true);
                     table_utils::for_each(in, f);
                 }
             }
@@ -61,7 +61,7 @@ namespace // anonymous
                 for (size_t n = 0; n < m_input_filenames.size(); ++n)
                 {
                     input_file_holder_ptr inp = files::in(m_input_filenames[n]);
-                    gamma::istream_reader in(**inp);
+                    gamma::istream_reader in(**inp, true);
                     table_utils::for_each(in, f);
                 }
             }
