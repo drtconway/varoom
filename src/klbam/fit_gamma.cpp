@@ -15,7 +15,6 @@ namespace // anonymous
 {
     typedef vector<string> strings;
 
-
     class fit_gamma_command : public varoom::command
     {
     public:

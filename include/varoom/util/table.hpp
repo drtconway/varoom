@@ -329,6 +329,35 @@ namespace varoom
 
         template <typename... Ts, template <typename...> class T,
                   typename... Us, template <typename...> class U>
+        static void for_each_2(T<Ts...>& p_lhs, U<Us...>& p_rhs, std::function<void(const std::tuple<Ts...>&,
+                                                                                    const std::tuple<Us...>&)> p_func)
+        {
+            static_assert(std::is_base_of<detail::input_table_implementation<Ts...>, T<Ts...>>::value);
+            static_assert(std::is_base_of<detail::input_table_implementation<Us...>, U<Us...>>::value);
+
+            using lhs_row = std::tuple<Ts...>;
+            using rhs_row = std::tuple<Us...>;
+
+            lhs_row x;
+            rhs_row y;
+
+            bool more_x = p_lhs.next(x);
+            bool more_y = p_rhs.next(y);
+
+            while(more_x && more_y)
+            {
+                p_func(x, y);
+                more_x = p_lhs.next(x);
+                more_y = p_rhs.next(y);
+            }
+            if (more_x || more_y)
+            {
+                throw std::runtime_error("for_each: iterators have different lengths");
+            }
+        }
+
+        template <typename... Ts, template <typename...> class T,
+                  typename... Us, template <typename...> class U>
         static void map(std::function<void(const std::tuple<Ts...>&,std::tuple<Us...>&)> p_func, T<Ts...>& p_src, U<Us...>& p_dest)
         {
             static_assert(std::is_base_of<detail::input_table_implementation<Ts...>, T<Ts...>>::value);

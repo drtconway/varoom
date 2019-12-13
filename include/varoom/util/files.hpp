@@ -7,8 +7,12 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <boost/filesystem.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <sys/stat.h>
 
 #ifndef VAROOM_UTIL_TEXT_HPP
@@ -34,6 +38,52 @@ namespace varoom
         virtual ~output_file_holder() {}
     };
     typedef std::shared_ptr<output_file_holder> output_file_holder_ptr;
+
+    class files_impl
+    {
+    public:
+        virtual input_file_holder_ptr in(const std::string& p_name) = 0;
+
+        virtual output_file_holder_ptr out(const std::string& p_name) = 0;
+
+        virtual bool exists(const std::string& p_name) = 0;
+
+        virtual void remove(const std::string& p_name) = 0;
+    };
+
+    class tmp_file
+    {
+    public:
+        tmp_file(files_impl& p_impl, const std::string& p_name)
+            : m_impl(p_impl), m_name(p_name)
+        {
+        }
+
+        input_file_holder_ptr in()
+        {
+            return m_impl.in(m_name);
+        }
+
+        output_file_holder_ptr out()
+        {
+            return m_impl.out(m_name);
+        }
+
+        void remove()
+        {
+            m_impl.remove(m_name);
+        }
+
+        ~tmp_file()
+        {
+            m_impl.remove(m_name);
+        }
+
+    private:
+        files_impl& m_impl;
+        const std::string m_name;
+    };
+    typedef std::shared_ptr<tmp_file> tmp_file_ptr;
 
     namespace detail
     {
@@ -221,16 +271,6 @@ namespace varoom
             boost::iostreams::filtering_ostream m_filter;
         };
 
-        class files_impl
-        {
-        public:
-            virtual input_file_holder_ptr in(const std::string& p_name) = 0;
-
-            virtual output_file_holder_ptr out(const std::string& p_name) = 0;
-
-            virtual bool exists(const std::string& p_name) = 0;
-        };
-
         class basic_files_impl : public files_impl
         {
         public:
@@ -264,6 +304,11 @@ namespace varoom
             {
                 struct stat buf;
                 return (stat(p_name.c_str(), &buf) == 0);
+            }
+
+            virtual void remove(const std::string& p_name)
+            {
+                boost::filesystem::remove(p_name);
             }
         };
 
@@ -303,6 +348,11 @@ namespace varoom
                 return m_files.find(p_name) != m_files.end();
             }
 
+            virtual void remove(const std::string& p_name)
+            {
+                m_files.erase(p_name);
+            }
+
         private:
             std::map<std::string,std::string>& m_files;
         };
@@ -321,35 +371,55 @@ namespace varoom
             return impl().out(p_name);
         }
 
+        static tmp_file_ptr tmp(std::string p_suffix = "")
+        {
+            std::string name = tmp_name();
+            return tmp_file_ptr(new tmp_file(impl(), name));
+        }
+
         static bool exists(const std::string& p_name)
         {
             return impl().exists(p_name);
         }
 
+        static void remove(const std::string& p_name)
+        {
+            return impl().remove(p_name);
+        }
+
         static void file_impl()
         {
-                auto p = std::unique_ptr<detail::files_impl>(new detail::basic_files_impl);
+                auto p = std::unique_ptr<files_impl>(new detail::basic_files_impl);
                 impl(std::move(p));
         }
 
         static void string_impl(std::map<std::string,std::string>& p_files)
         {
-                auto p = std::unique_ptr<detail::files_impl>(new detail::string_files_impl(p_files));
+                auto p = std::unique_ptr<files_impl>(new detail::string_files_impl(p_files));
                 impl(std::move(p));
         }
 
-        static detail::files_impl& impl(std::unique_ptr<detail::files_impl> p_impl = std::unique_ptr<detail::files_impl>())
+        static files_impl& impl(std::unique_ptr<files_impl> p_impl = std::unique_ptr<files_impl>())
         {
-            static std::unique_ptr<detail::files_impl> impl_ptr;
+            static std::unique_ptr<files_impl> impl_ptr;
             if (p_impl)
             {
                 impl_ptr = std::move(p_impl);
             }
             if (!impl_ptr)
             {
-                impl_ptr = std::unique_ptr<detail::files_impl>(new detail::basic_files_impl);
+                impl_ptr = std::unique_ptr<files_impl>(new detail::basic_files_impl);
             }
             return *impl_ptr;
+        }
+
+        static std::string tmp_name(std::string p_suffix = "")
+        {
+            boost::uuids::random_generator gen;
+            boost::uuids::uuid id = gen();
+            std::ostringstream out;
+            out << "/tmp/" << id << p_suffix;
+            return out.str();
         }
     };
 }

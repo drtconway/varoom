@@ -5,7 +5,6 @@
 #include "varoom/klbam/types.hpp"
 
 #include <cmath>
-#include <initializer_list>
 
 using namespace std;
 using namespace boost;

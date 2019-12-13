@@ -11,6 +11,7 @@ lib boost_program_options : : <name>boost_program_options ;
 lib boost_test : : <name>boost_unit_test_framework ;
 lib pthread : : <name>pthread ;
 lib htslib : : <name>hts ;
+lib gdbm : : <name>gdbm ;
 
 #exe ighloo
 #    : src/ighloo.cpp
@@ -27,8 +28,10 @@ exe klbam
       src/klbam/sample_dist.cpp
       src/klbam/fit_gamma.cpp
       src/klbam/sample_pval.cpp
+      src/klbam/sample_annot.cpp
       src/klbam/sample_vcf.cpp
       boost_iostreams boost_log boost_program_options
+      boost_filesystem boost_system
       htslib pthread
     ;
 
@@ -42,15 +45,17 @@ exe mlstea
     ;
 
 #exe profile_vcfs
-#    : src/klbam/profile_vcfs.cpp boost_iostreams
+#    : src/klbam/profile_vcfs.cpp boost_iostreams boost_filesystem
 #    ;
 
 #exe process_bam
-#    : src/klbam/process_bam.cpp boost_iostreams
+#    : src/klbam/process_bam.cpp boost_iostreams boost_filesystem
 #    ;
 
 exe kmers_count
-    : src/kmers/count.cpp boost_iostreams pthread
+    : src/kmers/count.cpp
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 exe xlr_hash_finder
@@ -59,144 +64,222 @@ exe xlr_hash_finder
 
 unit-test test_kmers
     : tests/test_kmers.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_hgvsc_formatter
     : tests/hgvs/test_hgvsc_formatter.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_hgvsc_locus
     : tests/hgvs/test_hgvsc_locus.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_hgvsg_formatter
     : tests/hgvs/test_hgvsg_formatter.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_hgvsg_parser
     : tests/hgvs/test_hgvsg_parser.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_hgvs_positions
     : tests/hgvs/test_hgvs_positions.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_transcript
     : tests/hgvs/test_transcript.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_transcript_index
     : tests/hgvs/test_transcript_index.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_vcf_to_hgvsg
     : tests/hgvs/test_vcf_to_hgvsg.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_kmer_accumulator
     : tests/kmers/test_kmer_accumulator.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_positional_index
     : tests/kmers/test_positional_index.cpp boost_test boost_iostreams
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_sam_pileup
     : tests/sam/test_pileup.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_sam_reader
     : tests/sam/test_sam_reader.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_compact_seq
     : tests/seq/test_compact_seq.cpp boost_test boost_iostreams
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_fasta
     : tests/seq/test_fasta.cpp boost_test boost_iostreams pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_fastq
     : tests/seq/test_fastq.cpp boost_test boost_iostreams pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_filter
     : tests/seq/test_filter.cpp boost_test boost_iostreams pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_fastq_pair
     : tests/seq/test_fastq_pair.cpp boost_test boost_iostreams pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_genbank
     : tests/seq/test_genbank.cpp boost_test boost_iostreams pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_locus_stream
     : tests/seq/test_locus_stream.cpp boost_test boost_iostreams pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_vcf_info
     : tests/vcf/test_vcf_info.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_codec8
     : tests/util/test_codec8.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_concurrent_deque
     : tests/util/test_concurrent_deque.cpp boost_test pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_gamma_estimator
     : tests/util/test_gamma_estimator.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
+unit-test test_gdbm
+    : tests/util/test_gdbm.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      gdbm pthread
     ;
 
 unit-test test_lazy
     : tests/util/test_lazy.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_lines_of_file
-    : tests/util/test_lines_of_file.cpp boost_test boost_iostreams pthread
+    : tests/util/test_lines_of_file.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_lru_cache
     : tests/util/test_lru_cache.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_parsing
     : tests/util/test_parsing.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_strong_typedef
     : tests/util/test_strong_typedef.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_subtext
     : tests/util/test_subtext.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_table
     : tests/util/test_table.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_tuple_tsv
     : tests/util/test_tuple_tsv.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_xlr_hash
     : tests/util/test_xlr_hash.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_vcf_data
     : tests/vcf/test_vcf_data.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_vcf_parser
     : tests/vcf/test_vcf_parser.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;
 
 unit-test test_vcf_writer
     : tests/vcf/test_vcf_writer.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
     ;

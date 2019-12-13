@@ -6,16 +6,6 @@
 
 namespace varoom
 {
-    namespace detail
-    {
-        std::string& a_string_reference()
-        {
-            static std::string s;
-            return s;
-        }
-    }
-    // namespace detail
-
     class ordered_association
     {
     public:
@@ -28,6 +18,11 @@ namespace varoom
         size_t size() const
         {
             return m_keys.size();
+        }
+
+        bool contains(const std::string& p_key) const
+        {
+            return find(p_key) >= 0;
         }
 
         const_pair_type operator[](size_t p_idx) const

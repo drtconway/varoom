@@ -23,6 +23,11 @@ namespace varoom
             {
             }
 
+            bool operator==(const chrom& p_other) const
+            {
+                return varoom::locus_ordering::equal(*this, p_other);
+            }
+
             bool operator<(const chrom& p_other) const
             {
                 return varoom::locus_ordering::less(*this, p_other);
