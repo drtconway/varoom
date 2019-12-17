@@ -27,8 +27,6 @@ namespace // anonymous
             {
                 size_t z = Z(rng);
 
-                std::cerr << chrs[i] << '\t' << z << std::endl;
-
                 std::string x;
                 x.reserve(z);
 
@@ -41,7 +39,6 @@ namespace // anonymous
                 toc << chrs[i] << '\t' << z << '\t' << fn << std::endl;
             }
             m["/varoom/hg19/toc.txt"] = toc.str();
-            std::cerr << m["/varoom/hg19/toc.txt"];
         }
         return m;
     }
