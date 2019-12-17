@@ -2,6 +2,7 @@
 #include "varoom/util/files.hpp"
 #include "varoom/util/text.hpp"
 #include "varoom/util/table.hpp"
+#include "varoom/seq/index.hpp"
 #include "varoom/vcf/vcf_parser.hpp"
 #include "varoom/klbam/types.hpp"
 
@@ -81,8 +82,6 @@ namespace // anonymous
                 return;
             }
             annot::tuple& t = i->second;
-            std::get<annot::ref>(t) = p_ref;
-            std::get<annot::alt>(t) = p_alt;
             const vcf_info& ifo = p_info.get();
             if (ifo.contains("AF"))
             {
@@ -131,15 +130,17 @@ namespace // anonymous
     public:
         sample_annot_command(const string& p_counts_filename,
                             const string& p_scores_filename,
-                            const string& p_exac_filename)
+                            const string& p_genome_filename)
             : m_counts_filename(p_counts_filename),
               m_scores_filename(p_scores_filename),
-              m_exac_filename(p_exac_filename)
+              m_genome_filename(p_genome_filename)
         {
         }
 
         virtual void operator()()
         {
+            varoom::seq::index I(m_genome_filename, 20);
+
             map<locus,annot::tuple> items;
             {
                 std::function<void(const counts::tuple&,const scores::tuple&)> f =
@@ -156,6 +157,51 @@ namespace // anonymous
                     std::get<annot::cov>(t) = std::get<annot::nA>(t) + std::get<annot::nC>(t)
                                               + std::get<annot::nG>(t) + std::get<annot::nT>(t)
                                               + std::get<annot::nI>(t) + std::get<annot::nD>(t);
+
+                    std::get<annot::ref>(t) = I.get(l.first, l.second-1, l.second);
+
+                    vector<pair<uint32_t,string>> cts;
+                    if (std::get<annot::ref>(t) != "A" && std::get<annot::ref>(t) != "a")
+                    {
+                        cts.push_back(make_pair(std::get<annot::nA>(t), "A"));
+                    }
+                    else
+                    {
+                        std::get<annot::raf>(t) = (double)std::get<annot::nA>(t) / (double)std::get<annot::cov>(t);
+                    }
+                    if (std::get<annot::ref>(t) != "C" && std::get<annot::ref>(t) != "c")
+                    {
+                        cts.push_back(make_pair(std::get<annot::nC>(t), "C"));
+                    }
+                    else
+                    {
+                        std::get<annot::raf>(t) = (double)std::get<annot::nC>(t) / (double)std::get<annot::cov>(t);
+                    }
+                    if (std::get<annot::ref>(t) != "G" && std::get<annot::ref>(t) != "g")
+                    {
+                        cts.push_back(make_pair(std::get<annot::nG>(t), "G"));
+                    }
+                    else
+                    {
+                        std::get<annot::raf>(t) = (double)std::get<annot::nG>(t) / (double)std::get<annot::cov>(t);
+                    }
+                    if (std::get<annot::ref>(t) != "T" && std::get<annot::ref>(t) != "t")
+                    {
+                        cts.push_back(make_pair(std::get<annot::nT>(t), "T"));
+                    }
+                    else
+                    {
+                        std::get<annot::raf>(t) = (double)std::get<annot::nT>(t) / (double)std::get<annot::cov>(t);
+                    }
+                    cts.push_back(make_pair(std::get<annot::nI>(t), "I"));
+                    cts.push_back(make_pair(std::get<annot::nD>(t), "D"));
+                    std::sort(cts.rbegin(), cts.rend());
+
+                    std::get<annot::alt>(t) = cts.begin()->second;
+                    std::get<annot::vaf>(t) = (double)(cts.begin()->first) / (double)std::get<annot::cov>(t);
+                    
+                    //std::cerr << l.first << '\t' << l.second << '\t' << std::get<annot::ref>(t) << std::endl;
+
                     items[l] = t;
                 };
                 input_file_holder_ptr cinp = files::in(m_counts_filename);
@@ -164,19 +210,13 @@ namespace // anonymous
                 scores::istream_reader ss(**sinp, true);
                 table_utils::for_each_2(cs, ss, f);
             }
-            {
-                input_file_holder_ptr inp = files::in(m_exac_filename);
-                annotator a(items);
-                vcf_parser p(a);
-                p.parse(**inp);
-            }
 
             output_file_holder_ptr outp = files::out("-");
             annot::ostream_writer out(**outp, annot::labels());
             for (auto itr = items.begin(); itr != items.end(); ++itr)
             {
                 const annot::tuple& t = itr->second;
-                if (std::get<annot::pval>(t) > 1e-3 && std::get<annot::ref>(t).size() == 0)
+                if (std::get<annot::pval>(t) > 1e-3)
                 {
                     continue;
                 }
@@ -188,7 +228,7 @@ namespace // anonymous
     private:
         const string m_counts_filename;
         const string m_scores_filename;
-        const string m_exac_filename;
+        const string m_genome_filename;
 
     };
 
@@ -205,13 +245,13 @@ namespace // anonymous
             command_options opts("annotate results");
             opts.add_options()
                 ("help,h", "produce help message")
-                ("exac,E", po::value<string>(), "exac VCF file")
+                ("genome,g", po::value<string>(), "filename for genome table-of-contents")
                 ("counts,c", po::value<string>(), "input counts file")
                 ("scores,s", po::value<string>(), "input scores file")
                 ;
 
             po::positional_options_description pos;
-            pos.add("exac", 1);
+            pos.add("genome", 1);
             pos.add("counts", 1);
             pos.add("scores", 1);
 
@@ -231,7 +271,7 @@ namespace // anonymous
 
             params["counts"] = vm["counts"].as<string>();
             params["scores"] = vm["scores"].as<string>();
-            params["exac"] = vm["exac"].as<string>();
+            params["genome"] = vm["genome"].as<string>();
 
             return params;
         }
@@ -244,8 +284,8 @@ namespace // anonymous
             }
             string counts_fn = p_params["counts"];
             string scores_fn = p_params["scores"];
-            string exac_fn = p_params["exac"];
-            return command_ptr(new sample_annot_command(counts_fn, scores_fn, exac_fn));
+            string genome = p_params["genome"];
+            return command_ptr(new sample_annot_command(counts_fn, scores_fn, genome));
         }
     };
     

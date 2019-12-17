@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -136,19 +137,14 @@ namespace varoom
             block(size_t p_size, size_t p_block_bits, std::function<std::string(size_t)> p_func)
                 : node(p_size), m_block_bits(p_block_bits), m_func(p_func)
             {
-                size_t n = block_num(size());
-                m_blocks.resize(n+1);
             }
 
             virtual char operator[](size_t p_idx) const
             {
                 size_t b = block_num(p_idx);
-                if (!m_blocks[b])
-                {
-                    m_blocks[b] = node_ptr(new atom(m_func(b)));
-                }
+                const node& blk = ensure_block(b);
                 size_t i = block_start(b);
-                return (*m_blocks[b])[p_idx - i];
+                return blk[p_idx - i];
             }
 
             virtual void str(size_t p_begin, size_t p_end, str_ranges& p_res) const
@@ -162,17 +158,27 @@ namespace varoom
                     {
                         return;
                     }
-                    if (!m_blocks[b])
-                    {
-                        m_blocks[b] = node_ptr(new atom(m_func(b)));
-                    }
+                    const node& blk = ensure_block(b);
                     size_t bp = std::max(p_begin, bs);
                     size_t ep = std::min(p_end, block_start(b+1));
-                    m_blocks[b]->str(bp - bs, ep - bs, p_res);
+                    blk.str(bp - bs, ep - bs, p_res);
                 }
             }
 
         private:
+            const node& ensure_block(size_t p_block_num) const
+            {
+                if (m_blocks.find(p_block_num) == m_blocks.end())
+                {
+                    if (m_blocks.size() > 10)
+                    {
+                        m_blocks.clear();
+                    }
+                    m_blocks[p_block_num] = node_ptr(new atom(m_func(p_block_num)));
+                }
+                return *m_blocks[p_block_num];
+            }
+
             size_t block_num(size_t p_pos) const
             {
                 return p_pos >> m_block_bits;
@@ -185,7 +191,7 @@ namespace varoom
 
             const size_t m_block_bits;
             std::function<std::string(size_t)> m_func;
-            mutable std::vector<node_ptr> m_blocks;
+            mutable std::unordered_map<size_t,node_ptr> m_blocks;
         };
 
         rope()

@@ -66,6 +66,8 @@ namespace varoom
                         input_file_holder_ptr inp = files::in(fn);
                         std::istream& in = **inp;
 
+                        // std::cerr << "loading " << fn << '\t' << n << std::endl;
+
                         std::string res;
                         size_t z = 1ULL << B;
                         res.resize(z);
@@ -76,10 +78,12 @@ namespace varoom
                         return res;
                     };
 
+                    // std::cerr << "adding " << chr << '\t' << len << std::endl;
+
                     m_index[chr] = varoom::rope(len, B, ldr);
                 };
                 input_file_holder_ptr tocp = files::in(toc_path.string());
-                detail::genome::istream_reader g(**tocp, true);
+                detail::genome::istream_reader g(**tocp, false);
                 table_utils::for_each(g, f);
             }
 
@@ -88,7 +92,7 @@ namespace varoom
                 auto itr = m_index.find(p_acc);
                 if (itr == m_index.end())
                 {
-                    throw std::runtime_error("accession not found");
+                    throw std::runtime_error("accession not found: " + p_acc);
                 }
                 return itr->second.slice(p_begin, p_end).str();
             }
