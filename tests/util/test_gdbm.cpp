@@ -8,6 +8,11 @@
 
 namespace // anonymous
 {
+    struct foo
+    {
+        int baz;
+        double qux;
+    };
 }
 // namespace anonymous
 
@@ -51,7 +56,7 @@ BOOST_AUTO_TEST_CASE( try2 )
     {
         varoom::gdbm G(nm, varoom::gdbm::read_only);
         BOOST_CHECK_EQUAL(G.size(), N);
-        varoom::gdbm::datum x;
+        varoom::gdbm::owning_datum x;
         while (G.next(x))
         {
             std::string k = x.str();
@@ -60,5 +65,24 @@ BOOST_AUTO_TEST_CASE( try2 )
             m.erase(k);
         }
         BOOST_CHECK_EQUAL(m.size(), 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE( try3 )
+{
+    std::string nm = "tests/tmp/foo.gdbm";
+    varoom::files::remove(nm);
+    {
+        varoom::gdbm G(nm, varoom::gdbm::trunc);
+        std::string k = "bar";
+        foo v = { -42, 3.1415 };
+        G.put(varoom::gdbm::str_datum(k), varoom::gdbm::make_datum(v));
+    }
+    {
+        varoom::gdbm G(nm, varoom::gdbm::read_only);
+        std::string k = "bar";
+        foo v = varoom::gdbm::datum_cast<foo>(G.get(k));
+        BOOST_CHECK_EQUAL(v.baz, -42);
+        BOOST_CHECK_EQUAL(v.qux, 3.1415);
     }
 }

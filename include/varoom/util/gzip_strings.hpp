@@ -10,7 +10,7 @@ namespace varoom
 {
     class gzip_strings {
         public:
-            static std::string compress(const std::string& p_src)
+            static void compress(const std::string& p_src, std::string& p_dst)
             {
                 std::stringstream compressed;
                 std::stringstream origin(p_src);
@@ -20,10 +20,17 @@ namespace varoom
                 out.push(origin);
                 boost::iostreams::copy(out, compressed);
 
-                return compressed.str();
+                p_dst = compressed.str();
             }
 
-            static std::string decompress(const std::string& p_src)
+            static std::string compress(const std::string& p_src)
+            {
+                std::string res;
+                compress(p_src, res);
+                return res;
+            }
+
+            static void decompress(const std::string& p_src, std::string& p_dst)
             {
                 std::stringstream compressed(p_src);
                 std::stringstream decompressed;
@@ -33,7 +40,14 @@ namespace varoom
                 out.push(compressed);
                 boost::iostreams::copy(out, decompressed);
 
-                return decompressed.str();
+                p_dst = decompressed.str();
+            }
+
+            static std::string decompress(const std::string& p_src)
+            {
+                std::string res;
+                decompress(p_src, res);
+                return res;
             }
     };
 }

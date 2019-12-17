@@ -198,16 +198,6 @@ namespace varoom
         {
         }
 
-        rope(const rope& p_other)
-            : m_root(p_other.m_root)
-        {
-        }
-
-        rope(rope&& p_other)
-            : m_root(p_other.m_root)
-        {
-        }
-
         rope(const rope& p_lhs, const rope& p_rhs)
             : m_root(new concat(p_lhs.m_root, p_rhs.m_root))
         {

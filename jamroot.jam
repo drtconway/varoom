@@ -176,6 +176,12 @@ unit-test test_genbank
       pthread
     ;
 
+unit-test test_index
+    : tests/seq/test_index.cpp boost_test boost_iostreams pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
 unit-test test_locus_stream
     : tests/seq/test_locus_stream.cpp boost_test boost_iostreams pthread
       boost_iostreams boost_filesystem boost_system
@@ -232,6 +238,12 @@ unit-test test_lru_cache
 
 unit-test test_parsing
     : tests/util/test_parsing.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
+unit-test test_rope
+    : tests/util/test_rope.cpp boost_test
       boost_iostreams boost_filesystem boost_system
       pthread
     ;

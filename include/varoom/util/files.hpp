@@ -324,7 +324,7 @@ namespace varoom
             {
                 if (!exists(p_name))
                 {
-                    throw std::runtime_error("no such string file");
+                    throw std::runtime_error("no such string file: " + p_name);
                 }
                 const std::string& content = m_files.find(p_name)->second;
                 if (varoom::text::ends_with(p_name, ".gz"))

@@ -95,9 +95,5 @@ BOOST_AUTO_TEST_CASE( cons5 )
     BOOST_CHECK_EQUAL(X.size(), 0);
     BOOST_CHECK_EQUAL(r.size(), 2000);
     std::string s = r.str();
-    for (auto i = X.begin(); i != X.end(); ++i)
-    {
-        std::cerr << i->first << std::endl;
-    }
     BOOST_CHECK_EQUAL(X.size(), 3);
 }
