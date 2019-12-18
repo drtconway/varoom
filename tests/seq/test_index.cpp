@@ -8,13 +8,13 @@
 
 namespace // anonymous
 {
+    auto cwd = boost::filesystem::current_path() / boost::filesystem::path("hg19");
+
     std::map<std::string,std::string>& fs()
     {
         static std::map<std::string,std::string> m;
         if (m.size() == 0)
         {
-            auto cwd = boost::filesystem::current_path() / boost::filesystem::path("hg19");
-
             std::mt19937_64 rng(17);
 
             std::uniform_int_distribution<size_t> Z(64*1024, 128*1024);
@@ -52,7 +52,8 @@ namespace // anonymous
 
 BOOST_AUTO_TEST_CASE( enc1 )
 {
-    const std::string& s = fs().find("/varoom/hg19/chr2.txt")->second;
+    const std::string fn = (cwd / boost::filesystem::path("chr2.txt")).string();
+    const std::string& s = fs().find(fn)->second;
     varoom::files::string_impl(fs());
     varoom::seq::index I("hg19/toc.txt", 10);
 
