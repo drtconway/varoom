@@ -130,10 +130,12 @@ namespace // anonymous
     public:
         sample_annot_command(const string& p_counts_filename,
                             const string& p_scores_filename,
-                            const string& p_genome_filename)
+                            const string& p_genome_filename,
+                            const string& p_output_filename)
             : m_counts_filename(p_counts_filename),
               m_scores_filename(p_scores_filename),
-              m_genome_filename(p_genome_filename)
+              m_genome_filename(p_genome_filename),
+              m_output_filename(p_output_filename)
         {
         }
 
@@ -211,7 +213,7 @@ namespace // anonymous
                 table_utils::for_each_2(cs, ss, f);
             }
 
-            output_file_holder_ptr outp = files::out("-");
+            output_file_holder_ptr outp = files::out(m_output_filename);
             annot::ostream_writer out(**outp, annot::labels());
             for (auto itr = items.begin(); itr != items.end(); ++itr)
             {
@@ -229,6 +231,7 @@ namespace // anonymous
         const string m_counts_filename;
         const string m_scores_filename;
         const string m_genome_filename;
+        const string m_output_filename;
 
     };
 
@@ -248,12 +251,14 @@ namespace // anonymous
                 ("genome,g", po::value<string>(), "filename for genome table-of-contents")
                 ("counts,c", po::value<string>(), "input counts file")
                 ("scores,s", po::value<string>(), "input scores file")
+                ("output,o", po::value<string>()->default_value("-"), "output filename, defaults to '-' for stdout")
                 ;
 
             po::positional_options_description pos;
             pos.add("genome", 1);
             pos.add("counts", 1);
             pos.add("scores", 1);
+            pos.add("output", 1);
 
             po::variables_map vm;
             po::parsed_options parsed
@@ -272,6 +277,7 @@ namespace // anonymous
             params["counts"] = vm["counts"].as<string>();
             params["scores"] = vm["scores"].as<string>();
             params["genome"] = vm["genome"].as<string>();
+            params["output"] = vm["output"].as<string>();
 
             return params;
         }
@@ -285,7 +291,8 @@ namespace // anonymous
             string counts_fn = p_params["counts"];
             string scores_fn = p_params["scores"];
             string genome = p_params["genome"];
-            return command_ptr(new sample_annot_command(counts_fn, scores_fn, genome));
+            string output_fn = p_params["output"];
+            return command_ptr(new sample_annot_command(counts_fn, scores_fn, genome, output_fn));
         }
     };
     
