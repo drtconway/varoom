@@ -131,11 +131,13 @@ namespace // anonymous
         sample_annot_command(const string& p_counts_filename,
                             const string& p_scores_filename,
                             const string& p_genome_filename,
-                            const string& p_output_filename)
+                            const string& p_output_filename,
+                            double p_pvalue_cutoff)
             : m_counts_filename(p_counts_filename),
               m_scores_filename(p_scores_filename),
               m_genome_filename(p_genome_filename),
-              m_output_filename(p_output_filename)
+              m_output_filename(p_output_filename),
+              m_pvalue_cutoff(p_pvalue_cutoff)
         {
         }
 
@@ -218,7 +220,7 @@ namespace // anonymous
             for (auto itr = items.begin(); itr != items.end(); ++itr)
             {
                 const annot::tuple& t = itr->second;
-                if (std::get<annot::pval>(t) > 1e-3)
+                if (std::get<annot::pval>(t) > m_pvalue_cutoff)
                 {
                     continue;
                 }
@@ -232,6 +234,7 @@ namespace // anonymous
         const string m_scores_filename;
         const string m_genome_filename;
         const string m_output_filename;
+        const double m_pvalue_cutoff;
 
     };
 
@@ -252,6 +255,7 @@ namespace // anonymous
                 ("counts,c", po::value<string>(), "input counts file")
                 ("scores,s", po::value<string>(), "input scores file")
                 ("output,o", po::value<string>()->default_value("-"), "output filename, defaults to '-' for stdout")
+                ("pvalue,p", po::value<double>()->default_value(1.0), "pvalue cutoff to report annotated result, defaults to 1.0")
                 ;
 
             po::positional_options_description pos;
@@ -278,6 +282,7 @@ namespace // anonymous
             params["scores"] = vm["scores"].as<string>();
             params["genome"] = vm["genome"].as<string>();
             params["output"] = vm["output"].as<string>();
+            params["pvalue"] = vm["pvalue"].as<double>();
 
             return params;
         }
@@ -292,7 +297,8 @@ namespace // anonymous
             string scores_fn = p_params["scores"];
             string genome = p_params["genome"];
             string output_fn = p_params["output"];
-            return command_ptr(new sample_annot_command(counts_fn, scores_fn, genome, output_fn));
+            double pvalue = p_params["pvalue"];
+            return command_ptr(new sample_annot_command(counts_fn, scores_fn, genome, output_fn, pvalue));
         }
     };
     
