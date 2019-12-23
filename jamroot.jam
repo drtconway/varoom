@@ -12,6 +12,9 @@ lib boost_test : : <name>boost_unit_test_framework ;
 lib pthread : : <name>pthread ;
 lib htslib : : <name>hts ;
 lib gdbm : : <name>gdbm ;
+lib sdsl : : <name>sdsl ;
+lib divsufsort : : <name>divsufsort ;
+lib divsufsort64 : : <name>divsufsort64 ;
 
 #exe ighloo
 #    : src/ighloo.cpp
@@ -138,6 +141,12 @@ unit-test test_sam_reader
     : tests/sam/test_sam_reader.cpp boost_test
       boost_iostreams boost_filesystem boost_system
       pthread
+    ;
+
+unit-test test_compact
+    : tests/seq/test_compact.cpp boost_test boost_iostreams
+      boost_iostreams boost_filesystem boost_system
+      pthread sdsl divsufsort divsufsort64
     ;
 
 unit-test test_compact_seq
