@@ -11,5 +11,5 @@ namespace // anonymous
 
 BOOST_AUTO_TEST_CASE( enc1 )
 {
-    varoom::seq::compact::make_csa("data/hg19/chr1.txt", "data/compact/chr1");
+    //varoom::seq::compact::make_csa("data/hg19/chr18.txt", "data/compact/chr18");
 }

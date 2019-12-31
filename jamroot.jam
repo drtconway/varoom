@@ -191,6 +191,12 @@ unit-test test_index
       pthread
     ;
 
+unit-test test_kimmo
+    : tests/seq/test_kimmo.cpp boost_test boost_iostreams pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread sdsl divsufsort divsufsort64
+    ;
+
 unit-test test_locus_stream
     : tests/seq/test_locus_stream.cpp boost_test boost_iostreams pthread
       boost_iostreams boost_filesystem boost_system
