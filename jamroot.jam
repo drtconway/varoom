@@ -257,6 +257,12 @@ unit-test test_parsing
       pthread
     ;
 
+unit-test test_rank_set
+    : tests/util/test_rank_set.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
 unit-test test_rope
     : tests/util/test_rope.cpp boost_test
       boost_iostreams boost_filesystem boost_system
