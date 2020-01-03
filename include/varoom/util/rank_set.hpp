@@ -90,7 +90,7 @@ namespace varoom
                 }
                 else
                 {
-                    return (m_lhs ? m_lhs->size() : 0) + 1 + (m_lhs ? m_rhs->rank(p_key) : 0);
+                    return (m_lhs ? m_lhs->size() : 0) + 1 + (m_rhs ? m_rhs->rank(p_key) : 0);
                 }
             }
 
@@ -336,11 +336,13 @@ namespace varoom
         rank_set& insert(const T& p_item)
         {
             m_root = varoom::detail::avl_tree<T>::insert(p_item, m_root);
+            return *this;
         }
 
         rank_set& erase(const T& p_item)
         {
             m_root = varoom::detail::avl_tree<T>::remove(p_item, m_root);
+            return *this;
         }
 
     private:

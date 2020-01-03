@@ -235,3 +235,11 @@ BOOST_AUTO_TEST_CASE( avl_3 )
         }
     }
 }
+
+BOOST_AUTO_TEST_CASE( rank_set_1 )
+{
+    varoom::rank_set<size_t> R;
+    R.insert(6);
+    R.insert(1);
+    BOOST_CHECK_EQUAL(R.rank(8), 2);
+}
