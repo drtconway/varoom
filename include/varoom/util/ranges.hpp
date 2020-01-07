@@ -1,6 +1,7 @@
 #ifndef VAROOM_UTIL_RANGES_HPP
 #define VAROOM_UTIL_RANGES_HPP
 
+#include <algorithm>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -79,22 +80,28 @@ namespace varoom
             return n;
         }
 
-        void overlapping_ranges(position p_begin, position p_end, std::vector<range>& p_res) const
+        void ranges_at(position p_begin, position p_end, std::vector<range_id>& p_ranges) const
         {
-            //std::cerr << "m_begins.rank(" << p_begin << ") = " << m_begins.rank(p_begin) << std::endl;
-            //std::cerr << "m_begins.rank(" << p_end << ") = " << m_begins.rank(p_end) << std::endl;
-            //std::cerr << "m_ends.rank(" << p_begin << ") = " << m_ends.rank(p_begin) << std::endl;
-            //std::cerr << "m_ends.rank(" << p_end << ") = " << m_ends.rank(p_end) << std::endl;
+            p_ranges.clear();
             size_t r0 = std::min(m_begins.rank(p_begin), m_ends.rank(p_begin+1));
             size_t r1 = std::max(m_begins.rank(p_end), m_ends.rank(p_end));
             for (size_t i = r0; i < r1; ++i)
             {
-                range x(m_begins.select(i), m_ends.select(i));
-                p_res.push_back(x);
+                position p0 = m_begins.select(i);
+                auto itr = m_index.find(p0);
+                assert(itr != m_index.end());
+                p_ranges.insert(p_ranges.end(), itr->second.begin(), itr->second.end());
             }
+            std::sort(p_ranges.begin(), p_ranges.end());
+            p_ranges.erase(std::unique(p_ranges.begin(), p_ranges.end()), p_ranges.end());
         }
 
-        const std::vector<range_id>& ranges_at(position p_pos) const
+        void ranges_at(position p_pos, std::vector<range_id>& p_ranges) const
+        {
+            ranges_at(p_pos, p_pos+1, p_ranges);
+        }
+
+        const std::vector<range_id>& ranges_at_segment(position p_pos) const
         {
             auto itr = m_index.find(p_pos);
             if (itr == m_index.end())
@@ -102,6 +109,17 @@ namespace varoom
                 throw std::runtime_error("no segment at position");
             }
             return itr->second;
+        }
+
+        void overlapping_ranges(position p_begin, position p_end, std::vector<range>& p_res) const
+        {
+            size_t r0 = std::min(m_begins.rank(p_begin), m_ends.rank(p_begin+1));
+            size_t r1 = std::max(m_begins.rank(p_end), m_ends.rank(p_end));
+            for (size_t i = r0; i < r1; ++i)
+            {
+                range x(m_begins.select(i), m_ends.select(i));
+                p_res.push_back(x);
+            }
         }
 
     private:

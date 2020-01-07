@@ -90,16 +90,16 @@ BOOST_AUTO_TEST_CASE( split1 )
         BOOST_REQUIRE_EQUAL(rs.size(), 3);
         BOOST_CHECK_EQUAL(rs[0].first, 2);
         BOOST_CHECK_EQUAL(rs[0].second, 5);
-        BOOST_REQUIRE_EQUAL(R.ranges_at(2).size(), 1);
-        BOOST_CHECK_EQUAL(R.ranges_at(2)[0], 1);
+        BOOST_REQUIRE_EQUAL(R.ranges_at_segment(2).size(), 1);
+        BOOST_CHECK_EQUAL(R.ranges_at_segment(2)[0], 1);
         BOOST_CHECK_EQUAL(rs[1].first, 5);
         BOOST_CHECK_EQUAL(rs[1].second, 6);
-        BOOST_REQUIRE_EQUAL(R.ranges_at(5).size(), 2);
-        BOOST_CHECK_EQUAL(R.ranges_at(5)[0], 0);
-        BOOST_CHECK_EQUAL(R.ranges_at(5)[1], 1);
+        BOOST_REQUIRE_EQUAL(R.ranges_at_segment(5).size(), 2);
+        BOOST_CHECK_EQUAL(R.ranges_at_segment(5)[0], 0);
+        BOOST_CHECK_EQUAL(R.ranges_at_segment(5)[1], 1);
         BOOST_CHECK_EQUAL(rs[2].first, 6);
         BOOST_CHECK_EQUAL(rs[2].second, 10);
-        BOOST_REQUIRE_EQUAL(R.ranges_at(6).size(), 1);
-        BOOST_CHECK_EQUAL(R.ranges_at(6)[0], 0);
+        BOOST_REQUIRE_EQUAL(R.ranges_at_segment(6).size(), 1);
+        BOOST_CHECK_EQUAL(R.ranges_at_segment(6)[0], 0);
     }
 }
