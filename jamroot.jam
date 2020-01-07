@@ -266,7 +266,7 @@ unit-test test_parsing
 unit-test test_ranges
     : tests/util/test_ranges.cpp boost_test
       boost_iostreams boost_filesystem boost_system
-      pthread
+      pthread sdsl divsufsort divsufsort64
     ;
 
 unit-test test_rank_set
