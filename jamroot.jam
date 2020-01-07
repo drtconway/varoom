@@ -209,6 +209,12 @@ unit-test test_vcf_info
       pthread
     ;
 
+unit-test test_casket
+    : tests/util/test_casket.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
 unit-test test_codec8
     : tests/util/test_codec8.cpp boost_test
       boost_iostreams boost_filesystem boost_system
