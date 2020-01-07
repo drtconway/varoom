@@ -5,6 +5,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <nlohmann/json.hpp>
+#include "varoom/util/files.hpp"
 
 namespace // anonymous
 {
@@ -127,6 +128,31 @@ BOOST_AUTO_TEST_CASE( succinct_ranges_1 )
     r.make(R);
 
     size_t N = R.begins().size();
+    for (size_t i = 0; i < N; ++i)
+    {
+        size_t bb = R.begins().select(i);
+        size_t ee = R.ends().select(i);
+        std::vector<varoom::ranges::range_id> xs;
+        R.ranges_at(bb, ee, xs);
+        std::vector<varoom::ranges::range_id> ys;
+        r.ranges_at(bb, ee, ys);
+
+        BOOST_REQUIRE_EQUAL(ys.size(), xs.size());
+        for (size_t j = 0; j < xs.size(); ++j)
+        {
+            BOOST_CHECK_EQUAL(ys[j], xs[j]);
+        }
+    }
+
+    {
+        varoom::output_file_holder_ptr outp = varoom::files::out("tests/tmp/foo.gz");
+        r.save(**outp);
+    }
+    {
+        varoom::input_file_holder_ptr inp = varoom::files::in("tests/tmp/foo.gz");
+        r.load(**inp);
+    }
+
     for (size_t i = 0; i < N; ++i)
     {
         size_t bb = R.begins().select(i);

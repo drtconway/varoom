@@ -222,6 +222,27 @@ namespace varoom
             m_index_ranges.swap(E);
         }
 
+        void save(std::ostream& p_out) const
+        {
+            m_begins.serialize(p_out);
+            m_ends.serialize(p_out);
+            m_index.serialize(p_out);
+            m_index_ranges.serialize(p_out);
+        }
+
+        void load(std::istream& p_in)
+        {
+            m_begins.load(p_in);
+            m_begins_rank = sdsl::sd_vector<>::rank_1_type(&m_begins);
+            m_begins_select = sdsl::sd_vector<>::select_1_type(&m_begins);
+            m_ends.load(p_in);
+            m_ends_rank = sdsl::sd_vector<>::rank_1_type(&m_ends);
+            m_ends_select = sdsl::sd_vector<>::select_1_type(&m_ends);
+            m_index.load(p_in);
+            m_index_select = sdsl::bit_vector::select_1_type(&m_index);
+            m_index_ranges.load(p_in);
+        }
+
     private:
         void make(const varoom::rank_set<position>& p_poss,
                   sdsl::sd_vector<>& p_bits,
