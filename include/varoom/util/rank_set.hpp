@@ -291,8 +291,8 @@ namespace varoom
                 }
                 sane(x->m_lhs);
                 sane(x->m_rhs);
-                int b = x->balance_factor();
-                assert(-1 <= b && b <= 1);
+                //int b = x->balance_factor();
+                //assert(-1 <= b && b <= 1);
             }
 
             static void visit(ptr_type x, std::function<void(const KeyType&)> p_vis)

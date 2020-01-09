@@ -8,12 +8,12 @@
 #include "varoom/util/files.hpp"
 #endif
 
-#ifndef VAROOM_UTIL_ROPE_HPP
-#include "varoom/util/rope.hpp"
+#ifndef VAROOM_SEQ_FASTA_HPP
+#include "varoom/seq/fasta.hpp"
 #endif
 
-#ifndef VAROOM_UTIL_TABLE_HPP
-#include "varoom/util/table.hpp"
+#ifndef VAROOM_SEQ_KIMMO_HPP
+#include "varoom/seq/kimmo.hpp"
 #endif
 
 namespace varoom
@@ -22,85 +22,103 @@ namespace varoom
     {
         namespace detail
         {
-            struct genome : varoom::table<std::string,uint64_t,std::string>
-            {
-                using tuple = tuple_type;
-                using table = basic_inmemory_table;
-                using istream_reader = basic_istream_table;
-                using ostream_writer = basic_ostream_table;
-                using read_iterator = basic_read_iterator;
-                using write_iterator = basic_write_iterator;
-
-                static constexpr std::size_t chr = 0;
-                static constexpr std::size_t len = 1;
-                static constexpr std::size_t pth = 2;
-            };
         }
         // namespace detail
 
         class index
         {
         public:
-            index(const std::string& p_toc_filename, size_t p_block_size_bits)
-                : m_block_size_bits(p_block_size_bits)
+            using toc_type = std::unordered_map<std::string,size_t>;
+
+            index(const std::string& p_name)
+                : m_inp(varoom::files::in(p_name)), m_in(**m_inp)
             {
-                boost::filesystem::path toc_path = boost::filesystem::absolute(p_toc_filename);
-                m_parent_path = toc_path.parent_path();
+                load();
+            }
 
-                std::function<void(const detail::genome::tuple&)> f = [this] (const detail::genome::tuple& p_item) mutable {
-                    std::string chr = std::get<detail::genome::chr>(p_item);
-                    uint64_t len = std::get<detail::genome::len>(p_item);
-                    std::string pth = std::get<detail::genome::pth>(p_item);
-                    boost::filesystem::path p(pth);
-                    boost::filesystem::path r = p;
-                    if (r.is_relative())
-                    {
-                        r = m_parent_path;
-                        r /= p;
-                    }
-
-                    size_t B = m_block_size_bits;
-                    std::string fn = r.string();
-
-                    std::function<std::string(size_t)> ldr = [B,fn](size_t n) {
-                        input_file_holder_ptr inp = files::in(fn);
-                        std::istream& in = **inp;
-
-                        // std::cerr << "loading " << fn << '\t' << n << std::endl;
-
-                        std::string res;
-                        size_t z = 1ULL << B;
-                        res.resize(z);
-
-                        size_t pos = n << B;
-                        in.seekg(pos);
-                        in.read(&res[0], z);
-                        return res;
-                    };
-
-                    // std::cerr << "adding " << chr << '\t' << len << std::endl;
-
-                    m_index[chr] = varoom::rope(len, B, ldr);
-                };
-                input_file_holder_ptr tocp = files::in(toc_path.string());
-                detail::genome::istream_reader g(**tocp, false);
-                table_utils::for_each(g, f);
+            index(std::istream& p_in)
+                : m_in(p_in)
+            {
+                load();
             }
 
             std::string get(const std::string& p_acc, size_t p_begin, size_t p_end)
             {
-                auto itr = m_index.find(p_acc);
-                if (itr == m_index.end())
+                load_accession(p_acc);
+                return m_curr_seq->slice(p_begin, p_end);
+            }
+
+            void load()
+            {
+                m_in.seekg(0, std::ios_base::end);
+                uint64_t l = m_in.tellg();
+                m_in.seekg(l - sizeof(uint64_t), std::ios_base::beg);
+                uint64_t z;
+                m_in.read(reinterpret_cast<char*>(&z), sizeof(uint64_t));
+                m_in.seekg(z);
+                blob::load(m_in, [this](std::istream& i) mutable {
+                    nlohmann::json jj;
+                    i >> jj;
+                    for (nlohmann::json::iterator itr = jj.begin(); itr != jj.end(); ++itr)
+                    {
+                        size_t x = itr.value();
+                        m_toc[itr.key()] = x;
+                    }
+                });
+            }
+
+            void load_accession(const std::string& p_acc)
+            {
+                if (m_curr_acc == p_acc && m_curr_seq)
+                {
+                    return;
+                }
+                auto itr = m_toc.find(p_acc);
+                if (itr == m_toc.end())
                 {
                     throw std::runtime_error("accession not found: " + p_acc);
                 }
-                return itr->second.slice(p_begin, p_end).str();
+                uint64_t pos = itr->second;
+                m_in.seekg(pos, std::ios_base::beg);
+                m_curr_acc = p_acc;
+                m_curr_seq = std::shared_ptr<varoom::seq::kimmo>(new kimmo(m_in));
+            }
+
+            static void make(const std::vector<std::string>& p_sources, const std::string& p_outname)
+            {
+                varoom::output_file_holder_ptr outp = varoom::files::out(p_outname);
+                make(p_sources, **outp);
+            }
+
+            static void make(const std::vector<std::string>& p_sources, std::ostream& p_out)
+            {
+                toc_type toc;
+                for (size_t i = 0; i < p_sources.size(); ++i)
+                {
+                    std::cerr << "processing " << p_sources[i] << " @ " << p_out.tellp() << std::endl;
+                    input_file_holder_ptr inp = files::in(p_sources[i]);
+                    for (varoom::seq::fasta_reader r(**inp); r.more(); ++r)
+                    {
+                        const fasta_read rd = *r;
+                        size_t off = p_out.tellp();
+                        toc[rd.first] = off;
+                        kimmo::make(rd.second, p_out);
+                    }
+                }
+                uint64_t off = p_out.tellp();
+                blob::save(p_out, [&](std::ostream& o) {
+                    nlohmann::json jj = toc;
+                    o << jj;
+                });
+                p_out.write(reinterpret_cast<const char*>(&off), sizeof(off));
             }
 
         private:
-            const size_t m_block_size_bits;
-            boost::filesystem::path m_parent_path;
-            std::map<std::string,varoom::rope> m_index;
+            varoom::input_file_holder_ptr m_inp;
+            std::istream& m_in;
+            toc_type m_toc;
+            std::string m_curr_acc;
+            std::shared_ptr<varoom::seq::kimmo> m_curr_seq;
         };
     }
     // namespace seq

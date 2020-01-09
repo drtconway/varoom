@@ -6,6 +6,7 @@
 
 #include <nlohmann/json.hpp>
 #include "varoom/util/files.hpp"
+#include "varoom/util/json_builder.hpp"
 
 namespace // anonymous
 {
@@ -123,6 +124,27 @@ BOOST_AUTO_TEST_CASE( succinct_ranges_1 )
 {
     varoom::ranges_builder R;
     build_chr1(R);
+
+    if (0)
+    {
+        const std::unordered_map<size_t,std::vector<uint32_t>>& idx = R.index();
+
+        varoom::json_writer J(std::cout);
+        J.begin_array();
+        for (auto itr = idx.begin(); itr != idx.end(); ++itr)
+        {
+            J.begin_array();
+            J.number_unsigned(itr->first);
+            J.begin_array();
+            for (size_t i = 0; i < itr->second.size(); ++i)
+            {
+                J.number_unsigned(itr->second[i]);
+            }
+            J.end_array();
+            J.end_array();
+        }
+        J.end_array();
+    }
 
     varoom::ranges r;
     r.make(R);

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <bitset>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -81,6 +82,30 @@ namespace varoom
         static char to_char(const kmer& p_x)
         {
             return "ACGT"[p_x&3];
+        }
+
+        static void make(const std::string& p_seq, const size_t& p_k, std::function<void(kmer)> p_consumer)
+        {
+            const kmer M = (1 << (2*p_k)) - 1;
+            kmer x = 0;
+            size_t j = 0;
+            for (auto s = p_seq.begin(); s != p_seq.end(); ++s)
+            {
+                kmer b;
+                if (!to_base(*s, b))
+                {
+                    x = 0;
+                    j = 0;
+                    continue;
+                }
+                x = (x << 2) | b;
+                ++j;
+                if (j == p_k)
+                {
+                    p_consumer(x & M);
+                    --j;
+                }
+            }
         }
 
         static void make(const std::string& p_seq, const size_t& p_k, std::vector<kmer>& p_kmers)

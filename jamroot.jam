@@ -35,7 +35,7 @@ exe klbam
       src/klbam/sample_vcf.cpp
       boost_iostreams boost_log boost_program_options
       boost_filesystem boost_system
-      htslib pthread
+      htslib pthread sdsl divsufsort divsufsort64
     ;
 
 exe mlstea
@@ -45,6 +45,15 @@ exe mlstea
       boost_iostreams boost_log boost_program_options
       boost_filesystem boost_system
       pthread
+    ;
+
+exe varoom
+    : src/varoom.cpp
+      src/varoom/genome.cpp
+      src/varoom/tx.cpp
+      boost_iostreams boost_log boost_program_options
+      boost_filesystem boost_system
+      htslib pthread sdsl divsufsort divsufsort64
     ;
 
 #exe profile_vcfs
@@ -188,7 +197,7 @@ unit-test test_genbank
 unit-test test_index
     : tests/seq/test_index.cpp boost_test boost_iostreams pthread
       boost_iostreams boost_filesystem boost_system
-      pthread
+      pthread sdsl divsufsort divsufsort64
     ;
 
 unit-test test_kimmo
