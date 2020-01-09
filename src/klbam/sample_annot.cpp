@@ -143,7 +143,7 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            varoom::seq::index I(m_genome_filename, 20);
+            varoom::seq::index I(m_genome_filename);
 
             map<locus,annot::tuple> items;
             {

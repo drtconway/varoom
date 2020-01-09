@@ -15,6 +15,10 @@
 #include "varoom/util/files.hpp"
 #endif
 
+#ifndef VAROOM_UTIL_BLOB_HPP
+#include "varoom/util/blob.hpp"
+#endif
+
 #include <chrono>
 #include <cmath>
 #include <iostream>
@@ -26,12 +30,22 @@ namespace varoom
         class kimmo
         {
         public:
-            kimmo(const std::string& p_basename)
+            kimmo(const std::string& p_name)
             {
-                {
-                    varoom::input_file_holder_ptr inp = varoom::files::in(p_basename + ".toc");
+                varoom::input_file_holder_ptr inp = varoom::files::in(p_name);
+                load(**inp);
+            }
+
+            kimmo(std::istream& p_src)
+            {
+                load(p_src);
+            }
+
+            void load(std::istream& p_src)
+            {
+                varoom::blob::load(p_src, [this](std::istream& inp) mutable {
                     nlohmann::json jj;
-                    (**inp) >> jj;
+                    inp >> jj;
                     m_size = jj["size"];
                     {
                         nlohmann::json kk = jj["codes"];
@@ -51,9 +65,9 @@ namespace varoom
                             m_code_index[c] = std::pair<size_t,size_t>(n, j);
                         }
                     }
-                }
-                sdsl::load_from_file(m_S, p_basename + "-S.bv");
-                sdsl::load_from_file(m_D, p_basename + "-D.bv");
+                });
+                m_S.load(p_src);
+                m_D.load(p_src);
                 m_select_1_D = sdsl::bit_vector::select_1_type(&m_D);
             }
 
@@ -104,7 +118,13 @@ namespace varoom
                 return s;
             }
 
-            static void make(const std::string p_text, const std::string& p_basename)
+            static void make(const std::string p_text, const std::string& p_name)
+            {
+                varoom::output_file_holder_ptr outp = varoom::files::out(p_name);
+                make(p_text, **outp);
+            }
+
+            static void make(const std::string p_text, std::ostream& p_out)
             {
                 std::array<size_t,256> cts;
                 for (size_t i = 0; i < cts.size(); ++i)
@@ -156,6 +176,11 @@ namespace varoom
                         j = 0;
                     }
                 }
+                //if (j > 0)
+                //{
+                //    size_t d = (1ULL << n) - j;
+                //    std::cout << "there are " << d << " spare " << n << " bit codes." << std::endl;
+                //}
                 //std::cout << "total_bits = " << total_bits << std::endl;
                 {
                     double e = 0.0;
@@ -168,8 +193,7 @@ namespace varoom
                     std::cerr << "E0 = " << e << std::endl;
                 }
 
-                {
-                    varoom::output_file_holder_ptr outp = varoom::files::out(p_basename + ".toc");
+                varoom::blob::save(p_out, [&](std::ostream& out) mutable {
                     nlohmann::json jj = nlohmann::json::object();
                     jj["size"] = p_text.size();
                     jj["codes"] = codes;
@@ -178,8 +202,8 @@ namespace varoom
                     {
                         jj["index"].push_back({itr->first, itr->second.first, itr->second.second});
                     }
-                    (**outp) << jj << std::endl;
-                }
+                    out << jj << std::endl;
+                });
 
                 sdsl::bit_vector S(total_bits, 0);
                 sdsl::bit_vector D(total_bits+1, 0);
@@ -199,8 +223,8 @@ namespace varoom
                 }
                 D[b] = 1;
 
-                sdsl::store_to_file(S, p_basename + "-S.bv");
-                sdsl::store_to_file(D, p_basename + "-D.bv");
+                S.serialize(p_out);
+                D.serialize(p_out);
 
                 double p1 = double(p_text.size()) / double(total_bits);
                 double p0 = 1.0 - p1;
@@ -215,6 +239,33 @@ namespace varoom
                 std::cerr << "|S| = " << sdsl::size_in_mega_bytes(S) << std::endl;
                 std::cerr << "|D| = " << sdsl::size_in_mega_bytes(D) << std::endl;
                 std::cerr << "bits/symbol = " << bz << std::endl;
+                if (0)
+                {
+                    sdsl::rrr_vector<127> RS(S);
+                    std::cerr << "|RS_127| = " << sdsl::size_in_mega_bytes(RS) << std::endl;
+                    sdsl::rrr_vector<127> RD(D);
+                    std::cerr << "|RD_127| = " << sdsl::size_in_mega_bytes(RD) << std::endl;
+                    z = sdsl::size_in_mega_bytes(RS) + sdsl::size_in_mega_bytes(RD);
+                    bz = 8*1024.0*1024.0*z / p_text.size();
+                    std::cerr << "bits/symbol = " << bz << std::endl;
+                }
+                if (0)
+                {
+                    sdsl::rrr_vector<63> RS(S);
+                    std::cerr << "|RS_63| = " << sdsl::size_in_mega_bytes(RS) << std::endl;
+                    sdsl::rrr_vector<63> RD(D);
+                    std::cerr << "|RD_63| = " << sdsl::size_in_mega_bytes(RD) << std::endl;
+                    z = sdsl::size_in_mega_bytes(RS) + sdsl::size_in_mega_bytes(RD);
+                    bz = 8*1024.0*1024.0*z / p_text.size();
+                    std::cerr << "bits/symbol = " << bz << std::endl;
+                }
+                if (0)
+                {
+                    sdsl::sd_vector<> SS(S);
+                    std::cerr << "|SS| = " << sdsl::size_in_mega_bytes(SS) << std::endl;
+                    sdsl::sd_vector<> SD(D);
+                    std::cerr << "|SD| = " << sdsl::size_in_mega_bytes(SD) << std::endl;
+                }
             }
 
         private:

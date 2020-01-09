@@ -722,9 +722,9 @@ BOOST_AUTO_TEST_CASE( enc1 )
 {
     std::string s = run_model(17, 16*1024*1024);
 
-    varoom::seq::kimmo::make(s, "tests/tmp/chrV");
+    varoom::seq::kimmo::make(s, "tests/tmp/chrV.kimmo.gz");
 
-    varoom::seq::kimmo S("tests/tmp/chrV");
+    varoom::seq::kimmo S("tests/tmp/chrV.kimmo.gz");
 
     BOOST_REQUIRE_EQUAL(S.size(), s.size());
     for (size_t i = 0; i < 10; ++i)
