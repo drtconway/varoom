@@ -281,6 +281,12 @@ unit-test test_rope
       pthread
     ;
 
+unit-test test_sequit
+    : tests/util/test_sequit.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread sdsl divsufsort divsufsort64
+    ;
+
 unit-test test_strong_typedef
     : tests/util/test_strong_typedef.cpp boost_test
       boost_iostreams boost_filesystem boost_system
