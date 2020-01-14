@@ -80,6 +80,12 @@ unit-test test_kmers
       pthread
     ;
 
+unit-test test_funds_list
+    : tests/funds/test_list.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
 unit-test test_hgvsc_formatter
     : tests/hgvs/test_hgvsc_formatter.cpp boost_test
       boost_iostreams boost_filesystem boost_system
@@ -290,11 +296,11 @@ unit-test test_rope
       pthread
     ;
 
-unit-test test_sequit
-    : tests/util/test_sequit.cpp boost_test
-      boost_iostreams boost_filesystem boost_system
-      pthread sdsl divsufsort divsufsort64
-    ;
+#unit-test test_sequit
+#    : tests/util/test_sequit.cpp boost_test
+#      boost_iostreams boost_filesystem boost_system
+#      pthread sdsl divsufsort divsufsort64
+#    ;
 
 unit-test test_strong_typedef
     : tests/util/test_strong_typedef.cpp boost_test
