@@ -56,6 +56,25 @@ namespace varoom
         {
             return p(s);
         }
+
+        template <>
+        struct functor<parser>
+        {
+            static constexpr bool is_instance = true;
+
+            template <typename U, typename T, typename X>
+            static parser<U> fmap(X x, parser<T> p)
+            {
+                static_assert(std::is_convertible<X, std::function<U(T)>>::value);
+                return [=](symbols s) {
+                    pair_list<T,symbols> ts = parse(p, s);
+                    return functor<list>::template fmap<std::pair<U,symbols>>([=](std::pair<T,symbols> t) {
+                        std::pair<U,symbols> us(x(t.first), t.second);
+                        return us;
+                    }, ts);
+                };
+            }
+        };
         
         template <>
         struct monoid<parser>
@@ -80,6 +99,22 @@ namespace varoom
                 };
             }
         };
+
+        template <typename T>
+        parser<T> appendx(parser<T> x, parser<T> y)
+        {
+            return [=](symbols s) {
+                pair_list<T,symbols> x_res = parse(x, s);
+                if (!x_res.empty())
+                {
+                    return x_res;
+                }
+                else
+                {
+                    return parse(y, s);
+                }
+            };
+        }
 
         template<>
         struct monad<parser>
@@ -117,6 +152,22 @@ namespace varoom
             return monad<parser>::template bind<U>(f, p);
         }
 
+        template <typename T, typename X>
+        parser<T> sat(parser<T> p, X x)
+        {
+            static_assert(std::is_convertible<X, std::function<bool(T)>>::value);
+            return (p >>= [=](T t) {
+                if (x(t))
+                {
+                    return yield<parser,T>(t);
+                }
+                else
+                {
+                    return empty<parser,T>();
+                }
+            });
+        }
+
         parser<char> sym()
         {
             return [](symbols s) {
@@ -132,6 +183,42 @@ namespace varoom
                     return pair_list<char,symbols>(std::make_pair(t, r));
                 }
             };
+        }
+
+        parser<char> sym(char c)
+        {
+            return sat(sym(), [=](char d) { return c == d; });
+        }
+
+        template <typename T>
+        parser<list<T>> many0(parser<T> p)
+        {
+            return appendx((p >>= [=](T t) {
+                return (many0(p) >>= [=](list<T> ts) {
+                    return yield<parser,list<T>>(list<T>(t, ts));
+                });
+            }), yield<parser,list<T>>(list<T>{}));
+        }
+
+        template <typename T>
+        parser<list<T>> many1(parser<T> p)
+        {
+            return (p >>= [=](T t) {
+                return (many0(p) >>= [=](list<T> ts) {
+                    return yield<parser,list<T>>(list<T>(t, ts));
+                });
+            });
+        }
+
+        std::string list_to_string(list<char> ts)
+        {
+            std::string s;
+            while (!ts.empty())
+            {
+                s.push_back(ts.head());
+                ts = ts.tail();
+            }
+            return s;
         }
     }
     // namespace funds
