@@ -108,6 +108,31 @@ namespace varoom
             }
         };
 
+        template <typename T, typename X>
+        auto operator>>=(parser<T> p, X f) -> decltype(f(*reinterpret_cast<const T*>(NULL)))
+        {
+            using MU = decltype(f(*reinterpret_cast<T*>(NULL)));
+            using V = detail::same_functor<parser<T>,MU>;
+            using U = typename V::rhs_type;
+            return monad<parser>::template bind<U>(f, p);
+        }
+
+        parser<char> sym()
+        {
+            return [](symbols s) {
+                auto itr = s.begin();
+                if (itr == s.end())
+                {
+                    return pair_list<char,symbols>();
+                }
+                else
+                {
+                    char t = *itr;
+                    symbols r = symbols(++itr, s.end());
+                    return pair_list<char,symbols>(std::make_pair(t, r));
+                }
+            };
+        }
     }
     // namespace funds
 }

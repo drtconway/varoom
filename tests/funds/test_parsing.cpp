@@ -31,13 +31,14 @@ namespace // anonymous
         return xs.head();
     }
 
-    template <typename T, typename X>
-    auto operator>>=(parser<T> p, X f) -> decltype(f(*reinterpret_cast<const T*>(NULL)))
+    template<typename T, typename U>
+    parser<std::pair<T,U>> cons(parser<T> p, parser<U> q)
     {
-        using MU = decltype(f(*reinterpret_cast<T*>(NULL)));
-        using V = detail::same_functor<parser<T>,MU>;
-        using U = typename V::rhs_type;
-        return monad<parser>::template bind<U>(f, p);
+        return (p >>= [=](T t) {
+            return (q >>= [=](U u) {
+                return yield<parser,std::pair<T,U>>(std::make_pair(t, u));
+            });
+        });
     }
 }
 // namespace anonymous
@@ -64,4 +65,49 @@ BOOST_AUTO_TEST_CASE( cons2 )
     auto r = parse(q, symbols(""));
     BOOST_CHECK_EQUAL(length(r), 1);
     BOOST_CHECK_EQUAL(access(r, 0).first, 3.14*2*2);
+}
+
+BOOST_AUTO_TEST_CASE( sym0 )
+{
+    using P = parser<char>;
+    P p = sym();
+    auto r = parse(p, symbols(""));
+    BOOST_CHECK_EQUAL(length(r), 0);
+}
+
+BOOST_AUTO_TEST_CASE( sym1 )
+{
+    using P = parser<char>;
+    P p = sym();
+    auto r = parse(p, symbols("a"));
+    BOOST_CHECK_EQUAL(length(r), 1);
+    BOOST_CHECK_EQUAL(access(r, 0).first, 'a');
+    symbols t = access(r, 0).second;
+    std::string u(t.begin(), t.end());
+    BOOST_CHECK_EQUAL(u, "");
+}
+
+BOOST_AUTO_TEST_CASE( sym2a )
+{
+    using P = parser<char>;
+    using Q = parser<std::pair<char,char>>;
+    P p = sym();
+    Q q = cons(p, p);
+    auto r = parse(q, symbols("a"));
+    BOOST_CHECK_EQUAL(length(r), 0);
+}
+
+BOOST_AUTO_TEST_CASE( sym2b )
+{
+    using P = parser<char>;
+    using Q = parser<std::pair<char,char>>;
+    P p = sym();
+    Q q = cons(p, p);
+    auto r = parse(q, symbols("ab"));
+    BOOST_CHECK_EQUAL(length(r), 1);
+    BOOST_CHECK_EQUAL(access(r, 0).first.first, 'a');
+    BOOST_CHECK_EQUAL(access(r, 0).first.second, 'b');
+    symbols t = access(r, 0).second;
+    std::string u(t.begin(), t.end());
+    BOOST_CHECK_EQUAL(u, "");
 }
