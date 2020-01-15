@@ -96,7 +96,7 @@ namespace varoom
         template <>
         struct functor<list>
         {
-            using is_implemented = std::true_type;
+            static constexpr bool is_instance = true;
 
             template <typename U, typename T, typename X>
             static list<U> fmap(X p_m, list<T> p_xs)
@@ -115,12 +115,6 @@ namespace varoom
                 }
             }
         };
-
-        template <typename U, typename T, typename X>
-        list<U> fmap(X p_xform, list<T> p_xs)
-        {
-            return functor<list>::fmap<U,T,X>(p_xform, p_xs);
-        }
 
         template <typename T, typename X>
         list<T> filter(X p_pred, list<T> p_xs)
@@ -145,7 +139,7 @@ namespace varoom
         template <>
         struct applicative<list>
         {
-            using is_implemented = std::true_type;
+            static constexpr bool is_instance = true;
 
             template <typename T>
             static list<T> pure(T p_x)
@@ -153,7 +147,7 @@ namespace varoom
                 return list<T>(p_x);
             }
 
-            template <typename T, typename U, typename X>
+            template <typename U, typename T, typename X>
             static list<U> apply(list<X> p_ms, list<T> p_xs)
             {
                 static_assert(std::is_convertible<X, std::function<U(T)>>::value, 
@@ -165,27 +159,33 @@ namespace varoom
                 }
                 else
                 {
-                    return list<U>::concat(functor<list>::fmap<U,T,X>(p_ms.head(), p_xs), apply<T,U,X>(p_ms.tail(), p_xs));
+                    return list<U>::concat(functor<list>::fmap<U,T,X>(p_ms.head(), p_xs), apply<U,T,X>(p_ms.tail(), p_xs));
                 }
             }
         };
 
-        template <typename T>
-        list<T> pure(T p_x)
+        template <>
+        struct monoid<list>
         {
-            return applicative<list>::pure<T>(p_x);
-        }
+            static constexpr bool is_instance = true;
 
-        template <typename U, typename T, typename X>
-        list<U> apply(list<X> p_xs, list<T> p_ts)
-        {
-            return applicative<list>::apply<T,U,X>(p_xs, p_ts);
-        }
+            template <typename T>
+            static list<T> yield(T p_x)
+            {
+                return list<T>();
+            }
+
+            template <typename T>
+            static list<T> append(list<T> x, list<T> y)
+            {
+                return list<T>::concat(x, y);
+            }
+        };
 
         template <>
         struct monad<list>
         {
-            using is_implemented = std::true_type;
+            static constexpr bool is_instance = true;
 
             template <typename T>
             static list<T> yield(T p_x)
@@ -194,12 +194,12 @@ namespace varoom
             }
 
             template <typename U, typename T, typename X>
-            static list<U> for_each(X p_x, list<T> p_ts)
+            static list<U> bind(X p_x, list<T> p_ts)
             {
                 static_assert(std::is_convertible<X, std::function<list<U>(T)>>::value, 
                               "for_each requires a function type U(T)");
 
-                list<list<U>> uss = functor<list>::fmap<U>(p_x, p_ts);
+                list<list<U>> uss = functor<list>::fmap<list<U>>(p_x, p_ts);
                 return list<U>::flatten(uss);
             }
 
@@ -216,24 +216,6 @@ namespace varoom
                 }
             }
         };
-
-        template <typename T>
-        list<T> yield(T x)
-        {
-            return monad<list>::yield(x);
-        }
-
-        template <typename U, typename T, typename X>
-        static list<U> for_each(X p_x, list<T> p_ts)
-        {
-            return monad<list>::for_each<U,T,X>(p_x, p_ts);
-        }
-
-        template <typename T, typename X>
-        static void for_each(X p_x, list<T> p_ts)
-        {
-            monad<list>::for_each<T,X>(p_x, p_ts);
-        }
     }
     // namespace funds
 }

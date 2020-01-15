@@ -11,90 +11,103 @@ namespace varoom
     {
         using state = std::string;
 
-        template <typename S, typename T>
-        using pair_list = varoom::funds::list<std::pair<T,S>>;
+        template <typename T, typename U>
+        using pair_list = varoom::funds::list<std::pair<T,U>>;
 
-        template <typename S, typename T>
-        using parser = std::function<pair_list<S,T>(S)>;
+        class symbols
+        {
+        public:
+            using const_iterator = std::string::const_iterator;
 
-        template <typename S, typename T>
-        pair_list<S,T> parse(parser<S,T> p, S s)
+            symbols(const std::string& p_str)
+                : m_begin(p_str.begin()), m_end(p_str.end())
+            {
+            }
+
+            symbols(const_iterator p_begin, const_iterator p_end)
+                : m_begin(p_begin), m_end(p_end)
+            {
+            }
+
+            const_iterator begin() const
+            {
+                return m_begin;
+            }
+
+            const_iterator end() const
+            {
+                return m_end;
+            }
+
+        private:
+            const_iterator m_begin;
+            const_iterator m_end;
+        };
+
+        template <typename T>
+        struct parser : std::function<pair_list<T,symbols>(symbols)>
+        {
+            template <typename X>
+            parser(X x) : std::function<pair_list<T,symbols>(symbols)>(x) {}
+        };
+
+        template <typename T>
+        pair_list<T,symbols> parse(parser<T> p, symbols s)
         {
             return p(s);
         }
         
-        template <typename T, typename S>
-        parser<S,T> yield(T t)
+        template <>
+        struct monoid<parser>
         {
-            return [t] (S s) { return pair_list<S,T>(std::make_pair(t, s)); };
-        }
+            static constexpr bool is_instance = true;
 
-        template <typename U, typename T, typename S, typename X>
-        parser<S,U> for_each(parser<S,T> p, X k)
-        {
-            static_assert(std::is_convertible<X, std::function<parser<S,U>(T)>>::value, 
-                          "for_each requires a function type parser<U>(T)");
-            
-            parser<S,U> q = [=](state s) {
-                pair_list<S,T> xs = parse(p, s);
-                auto yss = functor<list>::fmap<pair_list<S,U>>([=](std::pair<T,S> ps) {
-                    T t = ps.first;
-                    S s1 = ps.second;
-                    parser<S,U> kt = k(t);
-                    pair_list<S,U> r = parse(kt, s1);
-                    return r;
-                }, xs);
-                return pair_list<S,U>::flatten(yss);
-            };
-            return q;
-        }
+            template <typename T>
+            static parser<T> empty()
+            {
+                return [](symbols s) {
+                    return pair_list<T,symbols>();
+                };
+            }
 
-        template <typename T, typename S>
-        parser<S,T> fail()
-        {
-            return [](S s) {
-                return pair_list<S,T>{};
-            };
-        }
+            template <typename T>
+            static parser<T> append(parser<T> lhs, parser<T> rhs)
+            {
+                return [=](symbols s) {
+                    pair_list<T,symbols> lhs_res = parse(lhs, s);
+                    pair_list<T,symbols> rhs_res = parse(rhs, s);
+                    return pair_list<T,symbols>::concat(lhs_res, rhs_res);
+                };
+            }
+        };
 
-        template <typename T, typename S>
-        parser<S,T> orelse(parser<S,T> lhs, parser<S,T> rhs)
+        template<>
+        struct monad<parser>
         {
-            return [=](S s) {
-                pair_list<S,T> lhs_res = parse(lhs, s);
-                if (!lhs_res.empty())
-                {
-                    return lhs_res;
-                }
-                return parse(rhs, s);
-            };
-        }
+            static constexpr bool is_instance = true;
 
-        template <typename T, typename S, typename X>
-        parser<S,T> with(parser<S,T> p, X pred)
-        {
-            static_assert(std::is_convertible<X, std::function<bool(T)>>::value, 
-                          "with requires a function type bool(T)");
-            return [=](S s) {
-                return filter([=](std::pair<T,S> x) {
-                    return pred(x.first);
-                }, parse(p, s));
-            };
-        }
+            template <typename T>
+            static parser<T> yield(T t)
+            {
+                return [=](symbols s) {
+                    return pair_list<T,symbols>(std::make_pair(t, s));
+                };
+            }
 
-        template <typename S>
-        parser<S,char> one()
-        {
-            return [](S s) {
-                if (s.begin() == s.end())
-                {
-                    return pair_list<S,char>{};
-                }
-                char r = *s.begin();
-                S s1(s.begin() + 1, s.end());
-                return pair_list<S,char>(std::make_pair(r, s1));
-            };
-        }
+            template<typename U, typename T, typename X>
+            static parser<U> bind(X x, parser<T> t)
+            {
+                static_assert(std::is_convertible<X, std::function<parser<U>(T)>>::value);
+
+                return [=](symbols s) {
+                    list<pair_list<U,symbols>> uss = fmap([=](std::pair<T,symbols> p) {
+                        return parse(x(p.first), p.second);
+                    }, parse(t, s));
+                    return pair_list<U,symbols>::flatten(uss);
+                };
+            }
+        };
+
     }
     // namespace funds
 }
