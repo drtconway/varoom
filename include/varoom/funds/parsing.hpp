@@ -172,28 +172,6 @@ namespace varoom
             });
         }
 
-        parser<char> sym()
-        {
-            return [](symbols s) {
-                auto itr = s.begin();
-                if (itr == s.end())
-                {
-                    return pair_list<char,symbols>();
-                }
-                else
-                {
-                    char t = *itr;
-                    symbols r = symbols(++itr, s.end());
-                    return pair_list<char,symbols>(std::make_pair(t, r));
-                }
-            };
-        }
-
-        parser<char> sym(char c)
-        {
-            return sat(sym(), [=](char d) { return c == d; });
-        }
-
         template <typename T>
         parser<list<T>> many0(parser<T> p)
         {
@@ -217,9 +195,77 @@ namespace varoom
         template <typename T>
         parser<maybe<T>> optional(parser<T> p)
         {
-            return appendx(p >>= [=](T t) {
-                yield<parser,maybe<T>>(maybe<T>(t));
-            }, yield<parser,maybe<T>>(maybe<T>{}));
+            return appendx(p >>= [](T t) {
+                return varoom::funds::yield<parser,maybe<T>>(maybe<T>(t));
+            }, varoom::funds::yield<parser,maybe<T>>(maybe<T>{}));
+        }
+
+        template <typename T>
+        parser<T> alt(std::initializer_list<parser<T>> p_alts)
+        {
+            if (p_alts.begin() == p_alts.end())
+            {
+                return empty<parser,T>();
+            }
+            auto itr = p_alts.begin();
+            parser<T> p = *itr;
+            while (++itr != p_alts.end())
+            {
+                p = append(p, *itr);
+            }
+            return p;
+        }
+
+        template <typename T>
+        parser<T> altx(std::initializer_list<parser<T>> p_alts)
+        {
+            if (p_alts.begin() == p_alts.end())
+            {
+                return empty<parser,T>();
+            }
+            auto itr = p_alts.begin();
+            parser<T> p = *itr;
+            while (++itr != p_alts.end())
+            {
+                p = appendx(p, *itr);
+            }
+            return p;
+        }
+
+        parser<char> sym()
+        {
+            return [](symbols s) {
+                auto itr = s.begin();
+                if (itr == s.end())
+                {
+                    return pair_list<char,symbols>();
+                }
+                else
+                {
+                    char t = *itr;
+                    symbols r = symbols(++itr, s.end());
+                    return pair_list<char,symbols>(std::make_pair(t, r));
+                }
+            };
+        }
+
+        parser<char> sym(char c)
+        {
+            return sat(sym(), [=](char d) { return c == d; });
+        }
+
+        parser<char> oneof(std::string p_chars)
+        {
+            return sat(sym(), [=](char c) {
+                for (size_t i = 0; i < p_chars.size(); ++i)
+                {
+                    if (c == p_chars[i])
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            });
         }
 
         std::string list_to_string(list<char> ts)

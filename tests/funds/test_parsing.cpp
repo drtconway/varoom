@@ -116,19 +116,34 @@ namespace // anonymous
         });
     }
 
-    parser<int> number()
+    parser<int> sign()
     {
-        return (digits() >>= [](list<int> ds) {
-            int i = 0;
-            while (!ds.empty())
+        return (optional(oneof("+-")) >>= [](maybe<char> mc) {
+            if (mc.nothing() || mc.just() == '+')
             {
-                i = 10*i + ds.head();
-                ds = ds.tail();
+                return yield<parser,int>(1);
             }
-            return yield<parser,int>(i);
+            else
+            {
+                return yield<parser,int>(-1);
+            }
         });
     }
 
+    parser<int> number()
+    {
+        return (sign() >>= [](int sgn) {
+            return (digits() >>= [=](list<int> ds) {
+                int i = 0;
+                while (!ds.empty())
+                {
+                    i = 10*i + ds.head();
+                    ds = ds.tail();
+                }
+                return yield<parser,int>(sgn*i);
+            });
+        });
+    }
 }
 // namespace anonymous
 
@@ -365,5 +380,15 @@ BOOST_AUTO_TEST_CASE( number1 )
         auto s = parse(p, symbols("123"));
         BOOST_REQUIRE_EQUAL(length(s), 1);
         BOOST_CHECK_EQUAL(access(s, 0).first, 123);
+    }
+    {
+        auto s = parse(p, symbols("+123"));
+        BOOST_REQUIRE_EQUAL(length(s), 1);
+        BOOST_CHECK_EQUAL(access(s, 0).first, 123);
+    }
+    {
+        auto s = parse(p, symbols("-123"));
+        BOOST_REQUIRE_EQUAL(length(s), 1);
+        BOOST_CHECK_EQUAL(access(s, 0).first, -123);
     }
 }

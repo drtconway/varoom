@@ -33,7 +33,7 @@ namespace varoom
 
             T just() const
             {
-                return m_item->value;
+                return *m_item;
             }
 
         private:
