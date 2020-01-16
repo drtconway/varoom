@@ -5,6 +5,10 @@
 #include "varoom/funds/list.hpp"
 #endif
 
+#ifndef VAROOM_FUNDS_maybe_HPP
+#include "varoom/funds/maybe.hpp"
+#endif
+
 namespace varoom
 {
     namespace funds
@@ -208,6 +212,14 @@ namespace varoom
                     return yield<parser,list<T>>(list<T>(t, ts));
                 });
             });
+        }
+
+        template <typename T>
+        parser<maybe<T>> optional(parser<T> p)
+        {
+            return appendx(p >>= [=](T t) {
+                yield<parser,maybe<T>>(maybe<T>(t));
+            }, yield<parser,maybe<T>>(maybe<T>{}));
         }
 
         std::string list_to_string(list<char> ts)
