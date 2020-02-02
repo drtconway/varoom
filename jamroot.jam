@@ -86,6 +86,12 @@ unit-test test_funds_list
       pthread
     ;
 
+unit-test test_funds_parsing
+    : tests/funds/test_parsing.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
 unit-test test_hgvsc_formatter
     : tests/hgvs/test_hgvsc_formatter.cpp boost_test
       boost_iostreams boost_filesystem boost_system
