@@ -4,12 +4,61 @@
 #define BOOST_TEST_MODULE ranges tests
 #include <boost/test/unit_test.hpp>
 
+#include <random>
 #include <nlohmann/json.hpp>
+#include "varoom/util/bitstream.hpp"
+#include "varoom/util/elias_fano.hpp"
 #include "varoom/util/files.hpp"
 #include "varoom/util/json_builder.hpp"
 
 namespace // anonymous
 {
+    uint64_t interlace(uint32_t x, uint32_t y)
+    {
+        uint64_t z = 0;
+        uint64_t xb = 2;
+        uint64_t yb = 1;
+        while (x > 0 || y > 0)
+        {
+            if (x & 1)
+            {
+                z |= xb;
+            }
+            if (y & 1)
+            {
+                z |= yb;
+            }
+
+            x >>= 1;
+            y >>= 1;
+            xb <<= 2;
+            yb <<= 2;
+        }
+        return z;
+    }
+
+    std::pair<uint32_t,uint32_t> deinterlace(uint64_t z)
+    {
+        uint32_t x = 0;
+        uint32_t y = 0;
+        uint32_t b = 1;
+        while (z > 0)
+        {
+            if (z & 1)
+            {
+                y |= b;
+            }
+            z >>= 1;
+            if (z & 1)
+            {
+                x |= b;
+            }
+            z >>= 1;
+            b <<= 1;
+        }
+        return std::make_pair(x, y);
+    }
+
     void build_chr1(varoom::ranges_builder& R)
     {
         std::ifstream i("tests/data/chr1-exons.json");
@@ -20,6 +69,32 @@ namespace // anonymous
             uint64_t p0 = j[k][0];
             uint64_t p1 = j[k][1];
             R.insert(varoom::ranges_builder::range(p0, p1));
+        }
+    }
+
+    void build_random(uint64_t S, uint64_t D, uint64_t M, uint64_t N,
+                      varoom::ranges_builder& R)
+    {
+        std::mt19937_64 rng(S);
+        std::uniform_int_distribution<uint64_t> Z(0, D-1);
+        std::poisson_distribution<uint64_t> W(M);
+        std::vector<varoom::ranges_builder::range> R0;
+        R0.reserve(N);
+        for (uint64_t i = 0; i < N; ++i)
+        {
+            uint64_t x = Z(rng);
+            uint64_t y = x + W(rng);
+            while (y >= D)
+            {
+                x = Z(rng);
+                y = x + W(rng);
+            }
+            R0.push_back(varoom::ranges_builder::range(x, y));
+        }
+        std::sort(R0.begin(), R0.end());
+        for (uint64_t i = 0; i < R0.size(); ++i)
+        {
+            R.insert(R0[i]);
         }
     }
 }
@@ -190,4 +265,65 @@ BOOST_AUTO_TEST_CASE( succinct_ranges_1 )
             BOOST_CHECK_EQUAL(ys[j], xs[j]);
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE( succinct_ranges_2 )
+{
+    for (uint32_t n = 20; n <= 20; ++n)
+    {
+        uint64_t S = 17;
+        uint64_t D = 1ULL << 32;
+        uint64_t M = 1ULL << 12;
+        uint64_t N = 1ULL << n;
+        varoom::ranges_builder R;
+        build_random(S, D, M, N, R);
+        const std::unordered_map<size_t,std::vector<uint32_t>>& idx = R.index();
+        std::unordered_map<uint32_t,std::vector<size_t>> w;
+        for (auto itr = idx.begin(); itr != idx.end(); ++itr)
+        {
+            const std::vector<uint32_t>& v = itr->second;
+            for (size_t i = 0; i < v.size(); ++i)
+            {
+                w[v[i]].push_back(itr->first);
+            }
+        }
+        std::map<size_t,std::vector<std::pair<uint32_t,uint32_t>>> jdx;
+        for (auto itr = w.begin(); itr != w.end(); ++itr)
+        {
+            std::vector<size_t> v = itr->second;
+            std::sort(v.begin(), v.end());
+            for (size_t j = 1; j < v.size(); ++j)
+            {
+                // They had better be contiguous!
+                BOOST_CHECK_EQUAL(v[j-1] < v[j], true);
+            }
+            uint32_t db = 0;
+            uint32_t de = v.size() - 1;
+            for (size_t i = 0; i < v.size(); ++i, ++db, --de)
+            {
+                jdx[v[i]].push_back(std::make_pair(db, de));
+            }
+        }
+        size_t t = 0;
+        varoom::bitstream B;
+        for (auto itr = jdx.begin(); itr != jdx.end(); ++itr)
+        {
+            std::vector<std::pair<uint32_t,uint32_t>> v = itr->second;
+            std::sort(v.begin(), v.end());
+            //nlohmann::json w(nlohmann::json::array());
+            for (auto jtr = v.begin(); jtr != v.end(); ++jtr)
+            {
+                //w.push_back(nlohmann::json({jtr->first, jtr->second}));
+                varoom::golomb::encode(B, jtr->first);
+                varoom::golomb::encode(B, jtr->second);
+                t += 64;
+            }
+            //std::cerr << n
+            //    << '\t' << itr->first
+            //    << '\t' << nlohmann::json(w)
+            //    << std::endl;
+        }
+        std::cerr << t << " vs " << B.size() << " ~= " << (double(B.size())/double(t)) << std::endl;
+    }
+
 }

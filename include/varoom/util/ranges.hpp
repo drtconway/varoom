@@ -15,6 +15,11 @@
 
 namespace varoom
 {
+    namespace detail
+    {
+    }
+    // namespace detail
+
     class ranges_builder
     {
     public:

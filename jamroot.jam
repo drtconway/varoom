@@ -224,6 +224,12 @@ unit-test test_vcf_info
       pthread
     ;
 
+unit-test test_bitstream
+    : tests/util/test_bitstream.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
 unit-test test_casket
     : tests/util/test_casket.cpp boost_test
       boost_iostreams boost_filesystem boost_system
@@ -238,6 +244,12 @@ unit-test test_codec8
 
 unit-test test_concurrent_deque
     : tests/util/test_concurrent_deque.cpp boost_test pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
+unit-test test_elias_fano
+    : tests/util/test_elias_fano.cpp boost_test
       boost_iostreams boost_filesystem boost_system
       pthread
     ;
