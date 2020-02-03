@@ -86,7 +86,7 @@ namespace // anonymous
                 for (auto jtr = itr->second.begin(); jtr != itr->second.end(); ++jtr)
                 {
                     ranges_builder::range x(jtr->first.first, jtr->first.second);
-                    ranges_builder::range_id x_i = R.insert(x);
+                    R.insert(x);
                     for (size_t i = 0; i < jtr->second.size(); ++i)
                     {
                         const refgene::tuple& t = jtr->second[i];
@@ -105,10 +105,7 @@ namespace // anonymous
                             ranges_builder::range ex;
                             ex.first = lexical_cast<size_t>(make_iterator_range(exs[j].first, exs[j].second));
                             ex.second = lexical_cast<size_t>(make_iterator_range(exe[j].first, exe[j].second));
-                            ranges_builder::range_id ex_i = R.insert(x);
-                            std::cout << itr->first
-                                      << '\t' << "<" << ex.first << "," << ex.second << "> -> " << ex_i
-                                      << std::endl;
+                            R.insert(x);
                         }
                     }
                 }

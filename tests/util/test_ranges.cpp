@@ -168,11 +168,8 @@ BOOST_AUTO_TEST_CASE( simple1 )
 BOOST_AUTO_TEST_CASE( split1 )
 {
     varoom::ranges_builder R;
-    auto r0 = R.insert(varoom::ranges_builder::range(5, 10));
-    auto r1 = R.insert(varoom::ranges_builder::range(2, 6));
-
-    BOOST_CHECK_EQUAL(r0, 0);
-    BOOST_CHECK_EQUAL(r1, 1);
+    R.insert(varoom::ranges_builder::range(5, 10));
+    R.insert(varoom::ranges_builder::range(2, 6));
 
     std::vector<varoom::ranges_builder::range> rs;
     {
@@ -192,6 +189,45 @@ BOOST_AUTO_TEST_CASE( split1 )
         BOOST_CHECK_EQUAL(rs[2].second, 10);
         BOOST_REQUIRE_EQUAL(R.ranges_at_segment(6).size(), 1);
         BOOST_CHECK_EQUAL(R.ranges_at_segment(6)[0], 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE( ranges_at_1 )
+{
+    varoom::ranges_builder R;
+    R.insert(varoom::ranges_builder::range(5, 10));
+    R.insert(varoom::ranges_builder::range(2, 6));
+
+    std::vector<varoom::ranges_builder::range> rs;
+    {
+        rs.clear();
+        R.ranges_at(0, 11, rs);
+        BOOST_REQUIRE_EQUAL(rs.size(), 2);
+        BOOST_CHECK_EQUAL(rs[0].first, 2);
+        BOOST_CHECK_EQUAL(rs[0].second, 6);
+        BOOST_CHECK_EQUAL(rs[1].first, 5);
+        BOOST_CHECK_EQUAL(rs[1].second, 10);
+    }
+}
+
+BOOST_AUTO_TEST_CASE( make_1 )
+{
+    varoom::ranges_builder R;
+    R.insert(varoom::ranges_builder::range(5, 10));
+    R.insert(varoom::ranges_builder::range(2, 6));
+
+    varoom::ranges r;
+    r.make(R);
+
+    std::vector<varoom::ranges_builder::range> rs;
+    {
+        rs.clear();
+        r.ranges_at(0, 11, rs);
+        BOOST_REQUIRE_EQUAL(rs.size(), 2);
+        BOOST_CHECK_EQUAL(rs[0].first, 2);
+        BOOST_CHECK_EQUAL(rs[0].second, 6);
+        BOOST_CHECK_EQUAL(rs[1].first, 5);
+        BOOST_CHECK_EQUAL(rs[1].second, 10);
     }
 }
 
@@ -229,15 +265,16 @@ BOOST_AUTO_TEST_CASE( succinct_ranges_1 )
     {
         size_t bb = R.begins().select(i);
         size_t ee = R.ends().select(i);
-        std::vector<varoom::ranges::range_id> xs;
+        std::vector<varoom::ranges::range> xs;
         R.ranges_at(bb, ee, xs);
-        std::vector<varoom::ranges::range_id> ys;
+        std::vector<varoom::ranges::range> ys;
         r.ranges_at(bb, ee, ys);
 
         BOOST_REQUIRE_EQUAL(ys.size(), xs.size());
         for (size_t j = 0; j < xs.size(); ++j)
         {
-            BOOST_CHECK_EQUAL(ys[j], xs[j]);
+            BOOST_CHECK_EQUAL(ys[j].first, xs[j].first);
+            BOOST_CHECK_EQUAL(ys[j].second, xs[j].second);
         }
     }
 
@@ -254,19 +291,21 @@ BOOST_AUTO_TEST_CASE( succinct_ranges_1 )
     {
         size_t bb = R.begins().select(i);
         size_t ee = R.ends().select(i);
-        std::vector<varoom::ranges::range_id> xs;
+        std::vector<varoom::ranges::range> xs;
         R.ranges_at(bb, ee, xs);
-        std::vector<varoom::ranges::range_id> ys;
+        std::vector<varoom::ranges::range> ys;
         r.ranges_at(bb, ee, ys);
 
         BOOST_REQUIRE_EQUAL(ys.size(), xs.size());
         for (size_t j = 0; j < xs.size(); ++j)
         {
-            BOOST_CHECK_EQUAL(ys[j], xs[j]);
+            BOOST_CHECK_EQUAL(ys[j].first, xs[j].first);
+            BOOST_CHECK_EQUAL(ys[j].second, xs[j].second);
         }
     }
 }
 
+#if 0
 BOOST_AUTO_TEST_CASE( succinct_ranges_2 )
 {
     for (uint32_t n = 20; n <= 20; ++n)
@@ -277,53 +316,7 @@ BOOST_AUTO_TEST_CASE( succinct_ranges_2 )
         uint64_t N = 1ULL << n;
         varoom::ranges_builder R;
         build_random(S, D, M, N, R);
-        const std::unordered_map<size_t,std::vector<uint32_t>>& idx = R.index();
-        std::unordered_map<uint32_t,std::vector<size_t>> w;
-        for (auto itr = idx.begin(); itr != idx.end(); ++itr)
-        {
-            const std::vector<uint32_t>& v = itr->second;
-            for (size_t i = 0; i < v.size(); ++i)
-            {
-                w[v[i]].push_back(itr->first);
-            }
-        }
-        std::map<size_t,std::vector<std::pair<uint32_t,uint32_t>>> jdx;
-        for (auto itr = w.begin(); itr != w.end(); ++itr)
-        {
-            std::vector<size_t> v = itr->second;
-            std::sort(v.begin(), v.end());
-            for (size_t j = 1; j < v.size(); ++j)
-            {
-                // They had better be contiguous!
-                BOOST_CHECK_EQUAL(v[j-1] < v[j], true);
-            }
-            uint32_t db = 0;
-            uint32_t de = v.size() - 1;
-            for (size_t i = 0; i < v.size(); ++i, ++db, --de)
-            {
-                jdx[v[i]].push_back(std::make_pair(db, de));
-            }
-        }
-        size_t t = 0;
-        varoom::bitstream B;
-        for (auto itr = jdx.begin(); itr != jdx.end(); ++itr)
-        {
-            std::vector<std::pair<uint32_t,uint32_t>> v = itr->second;
-            std::sort(v.begin(), v.end());
-            //nlohmann::json w(nlohmann::json::array());
-            for (auto jtr = v.begin(); jtr != v.end(); ++jtr)
-            {
-                //w.push_back(nlohmann::json({jtr->first, jtr->second}));
-                varoom::golomb::encode(B, jtr->first);
-                varoom::golomb::encode(B, jtr->second);
-                t += 64;
-            }
-            //std::cerr << n
-            //    << '\t' << itr->first
-            //    << '\t' << nlohmann::json(w)
-            //    << std::endl;
-        }
-        std::cerr << t << " vs " << B.size() << " ~= " << (double(B.size())/double(t)) << std::endl;
     }
 
 }
+#endif

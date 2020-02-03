@@ -8,6 +8,7 @@
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/rank_support.hpp>
 #include <sdsl/select_support.hpp>
+#include <sdsl/vlc_vector.hpp>
 
 #ifndef VAROOM_UTIL_RANK_SET_HPP
 #include "varoom/util/rank_set.hpp"
@@ -32,22 +33,22 @@ namespace varoom
         {
         }
 
-        range_id insert(const range& p_range)
+        size_t size() const
+        {
+            return m_next_range_id;
+        }
+
+        ranges_builder& insert(const range& p_range)
         {
             range_id n = m_next_range_id++;
+            m_toc[n] = p_range;
+
             std::vector<range> overlaps;
             overlapping_ranges(p_range.first, p_range.second, overlaps);
             range r = p_range;
-
-            //std::cerr << "overlaps.size() = " << overlaps.size() << std::endl;
-
             for (size_t i = 0; i < overlaps.size(); ++i)
             {
                 range& o = overlaps[i];
-                //std::cerr << i
-                //          << '\t' << o.first
-                //          << '\t' << o.second
-                //          << std::endl;
                 if (r.first < o.first)
                 {
                     m_begins.insert(r.first);
@@ -84,10 +85,11 @@ namespace varoom
                 m_ends.insert(r.second);
                 m_index[r.first].push_back(n);
             }
-            return n;
+
+            return *this;
         }
 
-        void ranges_at(position p_begin, position p_end, std::vector<range_id>& p_ranges) const
+        void ranges_at(position p_begin, position p_end, std::vector<range>& p_ranges) const
         {
             p_ranges.clear();
             size_t r0 = std::min(m_begins.rank(p_begin), m_ends.rank(p_begin+1));
@@ -97,13 +99,16 @@ namespace varoom
                 position p0 = m_begins.select(i);
                 auto itr = m_index.find(p0);
                 assert(itr != m_index.end());
-                p_ranges.insert(p_ranges.end(), itr->second.begin(), itr->second.end());
+                for (auto jtr = itr->second.begin(); jtr != itr->second.end(); ++jtr)
+                {
+                    p_ranges.push_back(m_toc.find(*jtr)->second);
+                }
             }
             std::sort(p_ranges.begin(), p_ranges.end());
             p_ranges.erase(std::unique(p_ranges.begin(), p_ranges.end()), p_ranges.end());
         }
 
-        void ranges_at(position p_pos, std::vector<range_id>& p_ranges) const
+        void ranges_at(position p_pos, std::vector<range>& p_ranges) const
         {
             ranges_at(p_pos, p_pos+1, p_ranges);
         }
@@ -156,6 +161,7 @@ namespace varoom
         varoom::rank_set<position> m_begins;
         varoom::rank_set<position> m_ends;
         std::unordered_map<position,std::vector<range_id>> m_index;
+        std::unordered_map<range_id,range> m_toc;
     };
 
     class ranges
@@ -164,27 +170,35 @@ namespace varoom
         using position = size_t;
         using range = std::pair<position,position>;
         using range_id = uint32_t;
+        using interval = std::pair<uint32_t,uint32_t>;
 
         ranges()
         {
         }
 
-        void ranges_at(position p_begin, position p_end, std::vector<range_id>& p_ranges) const
+        void ranges_at(position p_begin, position p_end, std::vector<range>& p_ranges) const
         {
             p_ranges.clear();
             size_t r0 = std::min(begins_rank(p_begin), ends_rank(p_begin+1));
             size_t r1 = std::max(begins_rank(p_end), ends_rank(p_end));
-            size_t i0 = m_index_select(r0+1) - r0;
-            size_t i1 = m_index_select(r1+1) - r1;
-            for (size_t i = i0; i < i1; ++i)
+            for (size_t r = r0; r < r1; ++r)
             {
-                p_ranges.push_back(m_index_ranges[i]);
+                size_t i0 = m_toc_starts_select(r+1);
+                size_t i1 = m_toc_starts_select(r+2);
+                for (size_t i = i0; i < i1;)
+                {
+                    size_t br = r - m_toc_entries[i++];
+                    size_t er = r + m_toc_entries[i++];
+                    position b = m_begins_select(br + 1);
+                    position e = m_ends_select(er + 1);
+                    p_ranges.push_back(range(b, e));
+                }
             }
             std::sort(p_ranges.begin(), p_ranges.end());
             p_ranges.erase(std::unique(p_ranges.begin(), p_ranges.end()), p_ranges.end());
         }
 
-        void ranges_at(position p_pos, std::vector<range_id>& p_ranges) const
+        void ranges_at(position p_pos, std::vector<range>& p_ranges) const
         {
             ranges_at(p_pos, p_pos+1, p_ranges);
         }
@@ -194,45 +208,67 @@ namespace varoom
             make(p_builder.begins(), m_begins, m_begins_rank, m_begins_select);
             make(p_builder.ends(), m_ends, m_ends_rank, m_ends_select);
 
-            const size_t n = p_builder.begins().size();
-            size_t idx_bits = 1;
-            size_t idx_entries = 0;
-            for (auto itr = p_builder.index().begin(); itr != p_builder.index().end(); ++itr)
-            {
-                //std::cerr << itr->first << std::endl;
-                idx_bits += 1 + itr->second.size();
-                idx_entries += itr->second.size();
-            }
+            const std::unordered_map<size_t,std::vector<uint32_t>>& idx = p_builder.index();
 
-            sdsl::bit_vector B(idx_bits, 0);
-            sdsl::int_vector<32> E(idx_entries, 0);
-
-            size_t j = 0;
-            size_t k = 0;
-            for (size_t i = 0; i < n; ++i)
+            // Traverse the index (a mapping from segment start position -> list of range_id)
+            // and compile a mapping from range_id to list of segment rank.
+            //
+            std::unordered_map<range_id,std::vector<size_t>> w;
+            for (auto itr = idx.begin(); itr != idx.end(); ++itr)
             {
-                position p = p_builder.begins().select(i);
-                auto itr = p_builder.index().find(p);
-                B[j++] = 1;
-                j += itr->second.size();
-                for (size_t l = 0; l < itr->second.size(); ++l)
+                size_t r = begins_rank(itr->first);
+                const std::vector<uint32_t>& v = itr->second;
+                for (size_t i = 0; i < v.size(); ++i)
                 {
-                    E[k++] = itr->second[l];
+                    w[v[i]].push_back(r);
                 }
             }
-            B[j] = 1;
 
-            m_index.swap(B);
-            m_index_select = sdsl::bit_vector::select_1_type(&m_index);
-            m_index_ranges.swap(E);
+            std::map<size_t,std::vector<std::pair<uint32_t,uint32_t>>> jdx;
+            size_t toc_count = 0;
+            for (auto itr = w.begin(); itr != w.end(); ++itr)
+            {
+                std::vector<size_t> v = itr->second;
+                std::sort(v.begin(), v.end());
+                uint32_t db = 0;
+                uint32_t de = v.size() - 1;
+                for (size_t i = 0; i < v.size(); ++i, ++db, --de)
+                {
+                    jdx[v[i]].push_back(std::make_pair(db, de));
+                    toc_count += 2;
+                }
+            }
+
+            sdsl::bit_vector toc_starts(toc_count + 1, 0);
+            sdsl::int_vector<32> toc_entries(toc_count, 0);
+            size_t j = 0;
+            for (auto itr = jdx.begin(); itr != jdx.end(); ++itr)
+            {
+                toc_starts[j] = 1;
+
+                std::vector<std::pair<uint32_t,uint32_t>> v = itr->second;
+                std::sort(v.begin(), v.end());
+                for (auto jtr = v.begin(); jtr != v.end(); ++jtr)
+                {
+                    toc_entries[j++] = jtr->first;
+                    toc_entries[j++] = jtr->second;
+                }
+            }
+            toc_starts[j] = 1;
+
+            m_toc_starts.swap(toc_starts);
+            m_toc_starts_select = sdsl::bit_vector::select_1_type(&m_toc_starts);
+
+            sdsl::vlc_vector<> compressed_toc_entries(toc_entries);
+            m_toc_entries.swap(compressed_toc_entries);
         }
 
         void save(std::ostream& p_out) const
         {
             m_begins.serialize(p_out);
             m_ends.serialize(p_out);
-            m_index.serialize(p_out);
-            m_index_ranges.serialize(p_out);
+            m_toc_starts.serialize(p_out);
+            m_toc_entries.serialize(p_out);
         }
 
         void load(std::istream& p_in)
@@ -243,13 +279,13 @@ namespace varoom
             m_ends.load(p_in);
             m_ends_rank = sdsl::sd_vector<>::rank_1_type(&m_ends);
             m_ends_select = sdsl::sd_vector<>::select_1_type(&m_ends);
-            m_index.load(p_in);
-            m_index_select = sdsl::bit_vector::select_1_type(&m_index);
-            m_index_ranges.load(p_in);
+            m_toc_starts.load(p_in);
+            m_toc_starts_select = sdsl::bit_vector::select_1_type(&m_toc_starts);
+            m_toc_entries.load(p_in);
         }
 
     private:
-        void make(const varoom::rank_set<position>& p_poss,
+        static void make(const varoom::rank_set<position>& p_poss,
                   sdsl::sd_vector<>& p_bits,
                   sdsl::sd_vector<>::rank_1_type& p_rank,
                   sdsl::sd_vector<>::select_1_type& p_select)
@@ -293,9 +329,9 @@ namespace varoom
         sdsl::sd_vector<> m_ends;
         sdsl::sd_vector<>::rank_1_type m_ends_rank;
         sdsl::sd_vector<>::select_1_type m_ends_select;
-        sdsl::bit_vector m_index;
-        sdsl::bit_vector::select_1_type m_index_select;
-        sdsl::int_vector<32> m_index_ranges;
+        sdsl::bit_vector m_toc_starts;
+        sdsl::bit_vector::select_1_type m_toc_starts_select;
+        sdsl::vlc_vector<> m_toc_entries;
     };
 }
 // namespace varoom
