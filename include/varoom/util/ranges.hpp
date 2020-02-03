@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <nlohmann/json.hpp>
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/rank_support.hpp>
 #include <sdsl/select_support.hpp>
@@ -282,6 +283,44 @@ namespace varoom
             m_toc_starts.load(p_in);
             m_toc_starts_select = sdsl::bit_vector::select_1_type(&m_toc_starts);
             m_toc_entries.load(p_in);
+        }
+
+        nlohmann::json stats() const
+        {
+            nlohmann::json S = nlohmann::json::object();
+
+            sdsl::bit_vector::rank_1_type toc_starts_rank(&m_toc_starts);
+
+            std::vector<uint64_t> h;
+            h.reserve(1024);
+            for (size_t i = 0; i < toc_starts_rank(m_toc_starts.size()) - 1; ++i)
+            {
+                size_t j0 = m_toc_starts_select(i + 1);
+                size_t j1 = m_toc_starts_select(i + 2);
+                size_t d = (j1 - j0) / 2;
+                while (h.size() <= d)
+                {
+                    h.push_back(0);
+                }
+                h[d]++;
+            }
+
+            S["B"] = nlohmann::json::object();
+            S["B"]["size"] = m_begins.size();
+            S["B"]["count"] = m_begins_rank(m_begins.size());
+            S["B"]["memory"] = sdsl::size_in_bytes(m_begins);
+            S["E"] = nlohmann::json::object();
+            S["E"]["size"] = m_ends.size();
+            S["E"]["count"] = m_ends_rank(m_ends.size());
+            S["E"]["memory"] = sdsl::size_in_bytes(m_ends);
+            S["Ti"]["size"] = m_toc_starts.size();
+            S["Ti"]["count"] = toc_starts_rank(m_toc_starts.size());
+            S["Ti"]["memory"] = sdsl::size_in_bytes(m_toc_starts);
+            S["Ti"]["hist"] = h;
+            S["Te"]["size"] = m_toc_entries.size();
+            S["Te"]["memory"] = sdsl::size_in_bytes(m_toc_entries);
+
+            return S;
         }
 
     private:

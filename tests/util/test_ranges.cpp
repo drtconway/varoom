@@ -5,7 +5,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <random>
-#include <nlohmann/json.hpp>
+#include <boost/lexical_cast.hpp>
 #include "varoom/util/bitstream.hpp"
 #include "varoom/util/elias_fano.hpp"
 #include "varoom/util/files.hpp"
@@ -13,6 +13,7 @@
 
 namespace // anonymous
 {
+#if 0
     uint64_t interlace(uint32_t x, uint32_t y)
     {
         uint64_t z = 0;
@@ -58,6 +59,7 @@ namespace // anonymous
         }
         return std::make_pair(x, y);
     }
+#endif
 
     void build_chr1(varoom::ranges_builder& R)
     {
@@ -72,23 +74,31 @@ namespace // anonymous
         }
     }
 
-    void build_random(uint64_t S, uint64_t D, uint64_t M, uint64_t N,
+#if 0
+    uint64_t build_random(uint64_t S, uint64_t D, uint64_t M, uint64_t N,
                       varoom::ranges_builder& R)
     {
         std::mt19937_64 rng(S);
         std::uniform_int_distribution<uint64_t> Z(0, D-1);
-        std::poisson_distribution<uint64_t> W(M);
+        //std::poisson_distribution<uint64_t> W(M);
+        std::exponential_distribution<> W(1.0);
         std::vector<varoom::ranges_builder::range> R0;
         R0.reserve(N);
+        uint64_t t = 0;
         for (uint64_t i = 0; i < N; ++i)
         {
             uint64_t x = Z(rng);
-            uint64_t y = x + W(rng);
+            //uint64_t y = x + M;
+            //uint64_t y = x + W(rng);
+            uint64_t y = x + M * (1 + W(rng));
             while (y >= D)
             {
                 x = Z(rng);
-                y = x + W(rng);
+                //y = x + M;
+                //y = x + W(rng);
+                y = x + M * (1 + W(rng));
             }
+            t += y - x;
             R0.push_back(varoom::ranges_builder::range(x, y));
         }
         std::sort(R0.begin(), R0.end());
@@ -96,7 +106,9 @@ namespace // anonymous
         {
             R.insert(R0[i]);
         }
+        return t;
     }
+#endif
 }
 // namespace anonymous
 
@@ -308,15 +320,83 @@ BOOST_AUTO_TEST_CASE( succinct_ranges_1 )
 #if 0
 BOOST_AUTO_TEST_CASE( succinct_ranges_2 )
 {
-    for (uint32_t n = 20; n <= 20; ++n)
+    //
+    // Not really a test case
+    //
+
+    size_t d = 17;
+    for (uint32_t i = 0; i < 100; ++i)
     {
-        uint64_t S = 17;
+        for (uint32_t n = 16; n < 22; ++n, ++d)
+        {
+            uint64_t S = d;
+            uint64_t D = 1ULL << 32;
+            uint64_t M = 1ULL << 10;
+            uint64_t N = 1ULL << n;
+            varoom::ranges_builder R;
+            uint64_t t = build_random(S, D, M, N, R);
+
+            varoom::ranges r;
+            r.make(R);
+
+            nlohmann::json s = r.stats();
+            s["C"] = t;
+            s["S"] = S;
+            s["N"] = N;
+
+            size_t mB = s["B"]["memory"];
+            size_t mE = s["E"]["memory"];
+            size_t mTi = s["Ti"]["memory"];
+            size_t mTe = s["Te"]["memory"];
+            size_t m = mB + mE + mTi + mTe;
+
+            std::vector<uint64_t> h = s["Ti"]["hist"];
+
+            uint64_t hs = 0;
+            uint64_t hn = 0;
+            uint64_t hm = h.size() - 1;
+            for (size_t j = 0; j < h.size(); ++j)
+            {
+                if (h[j] == 0)
+                {
+                    continue;
+                }
+                hs += j*h[j];
+                hn += h[j];
+            }
+
+            std::cerr << S
+                << '\t' << n
+                << '\t' << N
+                << '\t' << (double(t)/double(D))
+                << '\t' << (double(s["Ti"]["count"])/double(s["Ti"]["size"]))
+                << '\t' << (double(hs)/double(hn))
+                << '\t' << hm
+                << '\t' << (double(m)/double(1024*1024))
+                << '\t' << (double(m)/double(N))
+                << std::endl;
+        }
+    }
+    return;
+    for (uint32_t n = 16; n < 22; ++n)
+    {
+        uint64_t S = 17 + n;
         uint64_t D = 1ULL << 32;
         uint64_t M = 1ULL << 12;
         uint64_t N = 1ULL << n;
         varoom::ranges_builder R;
         build_random(S, D, M, N, R);
-    }
 
+        varoom::ranges r;
+        r.make(R);
+
+        nlohmann::json s = r.stats();
+        s["N"] = N;
+        std::cerr << s << std::endl;
+
+        std::string fn = std::string("tests/tmp/rnd-") + boost::lexical_cast<std::string>(N) + std::string(".sdsl");
+        varoom::output_file_holder_ptr outp = varoom::files::out(fn);
+        r.save(**outp);
+    }
 }
 #endif
