@@ -206,6 +206,12 @@ unit-test test_genbank
       pthread
     ;
 
+unit-test test_genome_map
+    : tests/seq/test_genome_map.cpp boost_test boost_iostreams pthread
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
 unit-test test_index
     : tests/seq/test_index.cpp boost_test boost_iostreams pthread
       boost_iostreams boost_filesystem boost_system
