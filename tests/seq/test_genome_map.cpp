@@ -146,3 +146,15 @@ BOOST_AUTO_TEST_CASE( hg19_1 )
         BOOST_CHECK_EQUAL(r.second, pos);
     }
 }
+
+BOOST_AUTO_TEST_CASE( hg19_2 )
+{
+    const varoom::seq::genome_map& g = varoom::seq::genome_map::hg19();
+    BOOST_CHECK_EQUAL(g.size(), 3136851001ULL);
+}
+
+BOOST_AUTO_TEST_CASE( hg38_1 )
+{
+    const varoom::seq::genome_map& g = varoom::seq::genome_map::hg38();
+    BOOST_CHECK_EQUAL(g.size(), 3209286105ULL);
+}
