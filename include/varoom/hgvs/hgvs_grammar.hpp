@@ -42,7 +42,72 @@ namespace varoom
             return seq<list<T>>(p, many1(q), [](T t, list<T> ts) { return list<T>(t, ts); });
         }
 
-        struct grammar
+        struct grammar_basics
+        {
+            static varoom::funds::parser<char> alpha()
+            {
+                using namespace varoom::funds;
+                parser<char> s = sym();
+                return sat(s, [](char c) { return std::isalpha(c); });
+            }
+
+            static varoom::funds::parser<char> alnum()
+            {
+                using namespace varoom::funds;
+                parser<char> s = sym();
+                return sat(s, [](char c) { return std::isalnum(c); });
+            }
+
+            static varoom::funds::parser<char> digit()
+            {
+                using namespace varoom::funds;
+                parser<char> s = sym();
+                return sat(s, [](char c) { return std::isdigit(c); });
+            }
+
+            static varoom::funds::parser<uint64_t> num()
+            {
+                using namespace varoom::funds;
+                return fmap([](std::string ds) {
+                    uint64_t x = 0;
+                    for (auto d = ds.begin(); d != ds.end(); ++d)
+                    {
+                        x = (10 * x) + uint64_t(*d - '0');
+                    }
+                    return x;
+                }, +digit());
+            }
+
+            static std::string cat(char c, std::string s)
+            {
+                std::string r;
+                r.reserve(1+s.size());
+                r.push_back(c);
+                r.insert(r.end(), s.begin(), s.end());
+                return r;
+            }
+        };
+
+        template <typename X>
+        struct grammar_traits {};
+
+        template <>
+        struct grammar_traits<hgvsg>
+        {
+            static varoom::funds::parser<hgvsg::position> pos()
+            {
+                using namespace varoom::funds;
+                return fmap([](int64_t x) { return hgvsg::position(uint64_t(x)); }, grammar_basics::num());
+            }
+
+            static varoom::funds::parser<hgvsg::reference> ref()
+            {
+                using namespace varoom::funds;
+                return yield<parser,hgvsg::reference>(hgvsg::reference{"wibble", 42});
+            }
+        };
+
+        struct grammar : grammar_basics
         {
             /**
              *
@@ -50,57 +115,63 @@ namespace varoom
              *
              * g_var <- accn ":g." (g_single | g_multi)
              *
-             * g_multi <- g_allele (';' g_allele)*
+             * <t>_single <- <t>_change
              *
-             * g_allele <- '[' g_single (';' g_single)* ']'
+             * <t>_multi <- <t>_phased_alleles | <t>_unphased_alleles
              *
-             * g_single <- g_id | g_sub | g_ins | g_del | g_delins | g_dup | g_inv | g_con | g_rep
+             * <t>_phased_alleles <- <t>_phased_allele (';' <t>_phased_allele)+
              *
-             * g_id <- g_pos '='
+             * <t>_unphased_alleles <- <t>_change (';' <t>_change)+
              *
-             * g_sub <- g_pos nuc '>' nuc
+             * <t>_phased_allele <- '[' <t>_single (';' <t>_single)* ']'
              *
-             * g_ins <- g_pos '_' g_pos "ins" (nuc+|num)
+             * <t>_change <- <t>_id | <t>_sub | <t>_ins | <t>_del | <t>_delins | <t>_dup | <t>_inv | <t>_con | <t>_rep
              *
-             * g_del <- g_loc "del" (nuc+|num)?
+             * <t>_id <- <t>_pos '='
              *
-             * g_delins <- g_loc "del" (nuc+|num)? "ins" (nuc+|num)
+             * <t>_sub <- <t>_pos nuc '>' nuc
              *
-             * g_dup <- g_loc "dup" (nuc+|num)?
+             * <t>_ins <- <t>_pos '_' <t>_pos "ins" (nuc+|num)
              *
-             * g_inv <- g_loc "inv" (nuc+|num)?
+             * <t>_del <- <t>_loc "del" (nuc+|num)?
              *
-             * g_con <- g_loc "con" (g_loc | g_ref_loc)
+             * <t>_delins <- <t>_loc "del" (nuc+|num)? "ins" (nuc+|num)
              *
-             * g_rep <- g_loc (nuc+ '[' num ']')+
+             * <t>_dup <- <t>_loc "dup" (nuc+|num)?
              *
-             * g_ref_loc <- (g_ref ':')? g_loc
+             * <t>_inv <- <t>_loc "inv" (nuc+|num)?
              *
-             * g_ref <- accn
+             * <t>_con <- <t>_loc "con" (<t>_loc | <t>_ref_loc)
              *
-             * g_interval <- g_pos '_' g_pos?
+             * <t>_rep <- <t>_loc (nuc+ '[' num ']')+
              *
-             * g_loc <- g_pos ('_' g_pos)?      == g_interval | g_pos
+             * <t>_ref_loc <- (<t>_ref ':')? <t>_loc
+             *
+             * <t>_ref <- accn
+             *
+             * <t>_interval <- <t>_pos '_' <t>_pos?
+             *
+             * <t>_loc <- <t>_pos ('_' <t>_pos)?      == <t>_interval | <t>_pos
              *
              * g_pos <- num
+             *
+             * c_pos <- s_pos
+             *
+             * n_pos <- s_pos
+             *
+             * s_pos <- ('-' | '*')? num (('+' | '-') num)?
              *
              * refseq <- accn ( '(' accn ')' )?
              *
              */
 
-            grammar()
-            {
-                using namespace varoom::funds;
-
-                using hgvs_parser = parser<variant_ptr>;
-
-            }
-
             static varoom::funds::parser<variant_ptr> g_var()
             {
+                using namespace varoom::funds;
                 return g_single();
             }
 
+#if 0
             static varoom::funds::parser<variant_ptr> g_multi()
             {
                 using namespace varoom::funds;
@@ -126,7 +197,7 @@ namespace varoom
             static varoom::funds::parser<variant_ptr> g_unphased_alleles(genomic_ref acc)
             {
                 using namespace varoom::funds;
-                return seq<variant_ptr>(sepby1(g_change(acc), sym(';')), [=](list<variant_ptr> aa) {
+                return seq<variant_ptr>(sepby1(change(acc), sym(';')), [=](list<variant_ptr> aa) {
                     std::vector<variant_ptr> alleles;
                     while (!aa.empty())
                     {
@@ -140,7 +211,7 @@ namespace varoom
             static varoom::funds::parser<variant_ptr> g_phased_allele(genomic_ref acc)
             {
                 using namespace varoom::funds;
-                return seq<variant_ptr>(sym('['), sepby1(g_change(acc), sym(';')), sym(']'), [=](char, list<variant_ptr> aa, char) {
+                return seq<variant_ptr>(sym('['), sepby1(change(acc), sym(';')), sym(']'), [=](char, list<variant_ptr> aa, char) {
                     std::vector<variant_ptr> alleles;
                     while (!aa.empty())
                     {
@@ -150,136 +221,166 @@ namespace varoom
                     return variant_ptr(new hgvsg_allele(acc, alleles, false));
                 });
             }
+#endif
 
             static varoom::funds::parser<variant_ptr> g_single()
             {
                 using namespace varoom::funds;
-                return (seq<genomic_ref>(g_ref(), str(":g."),
+                return (seq<genomic_ref>(ref<hgvsg>(), str(":g."),
                     [](genomic_ref acc, std::string) { return acc; }) >>= [](genomic_ref acc) {
-                        return g_change(acc);
+                        return change<hgvsg>(acc);
                     });
             }
 
-            static varoom::funds::parser<variant_ptr> g_change(genomic_ref acc)
+            template <typename X>
+            static varoom::funds::parser<variant_ptr> change(typename X::reference acc)
             {
                 using namespace varoom::funds;
                 return altx({
-                    g_id(acc), g_sub(acc),
-                    g_delins(acc),
-                    g_del(acc), g_ins(acc)
+                    id<X>(acc), sub<X>(acc),
+                    delins<X>(acc),
+                    del<X>(acc), ins<X>(acc)
                 });
             }
 
-            static varoom::funds::parser<variant_ptr> g_id(genomic_ref acc)
+            template <typename X>
+            static varoom::funds::parser<variant_ptr> id(typename X::reference acc)
             {
+                using locus = typename X::locus;
                 using namespace varoom::funds;
-                return seq<variant_ptr>(g_pos(), sym('='), [=](genomic_pos pos, char) {
-                    return variant_ptr(new hgvsg_id(acc, pos));
+                return seq<variant_ptr>(loc<X>(), sym('='), [=](locus loc, char) {
+                    return variant_ptr(new hgvs_id<X>(acc, loc));
                 });
             }
 
-            static varoom::funds::parser<variant_ptr> g_sub(genomic_ref acc)
+            template <typename X>
+            static varoom::funds::parser<variant_ptr> sub(typename X::reference acc)
             {
+                using position = typename X::position;
                 using namespace varoom::funds;
-                return seq<variant_ptr>(g_pos(), nuc(), sym('>'), nuc(), [=](genomic_pos pos, nucleotide ref, char, nucleotide alt) {
-                    return variant_ptr(new hgvsg_sub(acc, pos, ref, alt));
+                return seq<variant_ptr>(pos<X>(), nuc(), sym('>'), nuc(), [=](position pos, nucleotide ref, char, nucleotide alt) {
+                    return variant_ptr(new hgvs_sub<X>(acc, pos, ref, alt));
                 });
             }
 
-            static varoom::funds::parser<variant_ptr> g_ins(genomic_ref acc)
+            template <typename X>
+            static varoom::funds::parser<variant_ptr> ins(typename X::reference acc)
             {
+                using locus = typename X::locus;
                 using namespace varoom::funds;
-                return seq<variant_ptr>(g_interval(), str("ins"), +nuc(), [=](genomic_locus loc, std::string, nucleotides alt) {
-                    return variant_ptr(new hgvsg_ins(acc, loc, alt));
+                return seq<variant_ptr>(interval<X>(), str("ins"), +nuc(), [=](locus loc, std::string, nucleotides alt) {
+                    return variant_ptr(new hgvs_ins<X>(acc, loc, alt));
                 });
             }
 
-            static varoom::funds::parser<variant_ptr> g_del(genomic_ref acc)
+            template <typename X>
+            static varoom::funds::parser<variant_ptr> del(typename X::reference acc)
             {
+                using locus = typename X::locus;
                 using namespace varoom::funds;
-                return seq<variant_ptr>(g_loc(), str("del"), *nuc(), [=](genomic_locus loc, std::string, nucleotides ref) {
-                    return variant_ptr(new hgvsg_del(acc, loc, ref));
+                return seq<variant_ptr>(loc<X>(), str("del"), *nuc(), [=](locus loc, std::string, nucleotides ref) {
+                    return variant_ptr(new hgvs_del<X>(acc, loc, ref));
                 });
             }
 
-            static varoom::funds::parser<variant_ptr> g_delins(genomic_ref acc)
+            template <typename X>
+            static varoom::funds::parser<variant_ptr> delins(typename X::reference acc)
             {
+                using locus = typename X::locus;
                 using namespace varoom::funds;
-                return seq<variant_ptr>(g_loc(), str("del"), *nuc(), str("ins"), +nuc(), [=](genomic_locus loc, std::string, nucleotides ref, std::string, nucleotides alt) {
-                    return variant_ptr(new hgvsg_delins(acc, loc, ref, alt));
+                return seq<variant_ptr>(loc<X>(), str("del"), *nuc(), str("ins"), +nuc(),
+                    [=](locus loc, std::string, nucleotides ref, std::string, nucleotides alt) {
+                        return variant_ptr(new hgvs_delins<X>(acc, loc, ref, alt));
+                    });
+            }
+
+            template <typename X>
+            static varoom::funds::parser<variant_ptr> dup(typename X::reference acc)
+            {
+                using locus = typename X::locus;
+                using namespace varoom::funds;
+                return seq<variant_ptr>(loc<X>(), str("dup"), *nuc(), [=](locus loc, std::string, nucleotides ref) {
+                    return variant_ptr(new hgvs_dup<X>(acc, loc, ref));
                 });
             }
 
-            static varoom::funds::parser<variant_ptr> g_dup(genomic_ref acc)
+            template <typename X>
+            static varoom::funds::parser<variant_ptr> inv(typename X::reference acc)
             {
+                using locus = typename X::locus;
                 using namespace varoom::funds;
-                return seq<variant_ptr>(g_loc(), str("dup"), *nuc(), [=](genomic_locus loc, std::string s, nucleotides ref) {
-                    return variant_ptr(new hgvsg_dup(acc, loc, ref));
+                return seq<variant_ptr>(loc<X>(), str("inv"), *nuc(), [=](locus loc, std::string s, nucleotides ref) {
+                    return variant_ptr(new hgvs_inv<X>(acc, loc, ref));
                 });
             }
 
-            static varoom::funds::parser<variant_ptr> g_inv(genomic_ref acc)
+            template <typename X>
+            static varoom::funds::parser<variant_ptr> con(genomic_ref acc)
             {
+                using locus = typename X::locus;
+                using ref_and_loc = typename X::ref_and_loc;
                 using namespace varoom::funds;
-                return seq<variant_ptr>(g_loc(), str("inv"), *nuc(), [=](genomic_locus loc, std::string s, nucleotides ref) {
-                    return variant_ptr(new hgvsg_inv(acc, loc, ref));
+                return seq<variant_ptr>(loc<X>(), str("con"), ref_loc<X>(acc),
+                    [=](locus loc, std::string, ref_and_loc oth) {
+                        return variant_ptr(new hgvs_con<X>(acc, loc, oth.first, oth.second));
                 });
             }
 
-            using ref_and_loc = std::pair<genomic_ref,genomic_locus>;
-            static varoom::funds::parser<variant_ptr> g_con(genomic_ref acc)
+            template <typename X>
+            static varoom::funds::parser<typename X::ref_and_loc> ref_loc(typename X::reference acc)
             {
+                using reference = typename X::reference;
+                using locus = typename X::locus;
+                using ref_and_loc = typename X::ref_and_loc;
                 using namespace varoom::funds;
-                return seq<variant_ptr>(g_loc(), str("con"), g_ref_loc(acc),
-                    [=](genomic_locus loc, std::string s, ref_and_loc oth) {
-                        return variant_ptr(new hgvsg_con(acc, loc, oth.first, oth.second));
-                });
-            }
 
-            static varoom::funds::parser<genomic_locus> g_loc()
-            {
-                using namespace varoom::funds;
                 return altx({
-                    g_interval(),
-                    fmap([](genomic_pos p) {
-                        return genomic_locus(p, p);
-                    }, g_pos())
-                });
-            }
-
-            static varoom::funds::parser<genomic_locus> g_interval()
-            {
-                using namespace varoom::funds;
-                return seq<genomic_locus>(g_pos(), sym('_'), g_pos(), [](genomic_pos f, char c, genomic_pos l) {
-                    return genomic_locus(f, l);
-                });
-            }
-
-            static varoom::funds::parser<genomic_pos> g_pos()
-            {
-                using namespace varoom::funds;
-                return fmap([](int64_t x) { return genomic_pos(uint64_t(x)); }, num());
-            }
-
-            static varoom::funds::parser<ref_and_loc> g_ref_loc(genomic_ref acc)
-            {
-                using namespace varoom::funds;
-                return altx({
-                    seq<ref_and_loc>(g_ref(), sym(':'), g_loc(), [](genomic_ref ref, char, genomic_locus loc) {
+                    seq<ref_and_loc>(ref<X>(), sym(':'), loc<X>(), [](reference ref, char, locus loc) {
                         return ref_and_loc(ref, loc);
                     }),
-                    seq<ref_and_loc>(g_loc(), [=](genomic_locus loc) {
+                    seq<ref_and_loc>(loc<X>(), [=](locus loc) {
                         return ref_and_loc(acc, loc);
                     })
                 });
             }
 
-            static varoom::funds::parser<genomic_ref> g_ref()
+            template <typename X>
+            static varoom::funds::parser<typename X::locus> loc()
             {
+                using position = typename X::position;
+                using locus = typename X::locus;
                 using namespace varoom::funds;
-                return fmap([](accession x) {
-                    return genomic_ref{x.name, x.version};
-                }, accn());
+
+                return altx({
+                    interval<X>(),
+                    fmap([](position p) {
+                        return locus(p, p);
+                    }, pos<X>())
+                });
+            }
+
+            template <typename X>
+            static varoom::funds::parser<typename X::locus> interval()
+            {
+                using position = typename X::position;
+                using locus = typename X::locus;
+
+                using namespace varoom::funds;
+                return seq<locus>(pos<X>(), sym('_'), pos<X>(), [](position f, char c, position l) {
+                    return locus(f, l);
+                });
+            }
+
+            template <typename X>
+            static varoom::funds::parser<typename X::position> pos()
+            {
+                return grammar_traits<X>::pos();
+            }
+
+            template <typename X>
+            static varoom::funds::parser<typename X::reference> ref()
+            {
+                return grammar_traits<X>::ref();
             }
 
             static varoom::funds::parser<accession> accn()
@@ -328,48 +429,6 @@ namespace varoom
                 });
             }
 
-            static varoom::funds::parser<char> alpha()
-            {
-                using namespace varoom::funds;
-                parser<char> s = sym();
-                return sat(s, [](char c) { return std::isalpha(c); });
-            }
-
-            static varoom::funds::parser<char> alnum()
-            {
-                using namespace varoom::funds;
-                parser<char> s = sym();
-                return sat(s, [](char c) { return std::isalnum(c); });
-            }
-
-            static varoom::funds::parser<char> digit()
-            {
-                using namespace varoom::funds;
-                parser<char> s = sym();
-                return sat(s, [](char c) { return std::isdigit(c); });
-            }
-
-            static varoom::funds::parser<uint64_t> num()
-            {
-                using namespace varoom::funds;
-                return fmap([](std::string ds) {
-                    uint64_t x = 0;
-                    for (auto d = ds.begin(); d != ds.end(); ++d)
-                    {
-                        x = (10 * x) + uint64_t(*d - '0');
-                    }
-                    return x;
-                }, +digit());
-            }
-
-            static std::string cat(char c, std::string s)
-            {
-                std::string r;
-                r.reserve(1+s.size());
-                r.push_back(c);
-                r.insert(r.end(), s.begin(), s.end());
-                return r;
-            }
         };
     }
     // namespace hgvs
