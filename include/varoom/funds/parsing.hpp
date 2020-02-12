@@ -232,6 +232,26 @@ namespace varoom
             return p;
         }
 
+        template <typename U, typename X, typename... Ps>
+        static
+        typename std::enable_if<std::is_convertible<X, std::function<U(Ps...)>>::value,varoom::funds::parser<U>>::type
+        seq(X x, Ps... ps)
+        {
+            using namespace varoom::funds;
+            return yield<parser,U>(x(ps...));
+        }
+
+        template <typename U, typename T, typename... Ps>
+        static varoom::funds::parser<U>
+        seq(varoom::funds::parser<T> p, Ps... ps)
+        {
+            using namespace varoom::funds;
+
+            return (p >>= [=](T t) {
+                return seq<U>(ps..., t);
+            });
+        }
+
         parser<char> sym()
         {
             return [](symbols s) {
@@ -252,6 +272,28 @@ namespace varoom
         parser<char> sym(char c)
         {
             return sat(sym(), [=](char d) { return c == d; });
+        }
+
+        parser<std::string> str(std::string p_str)
+        {
+            return [=](symbols s) {
+                auto itr = p_str.begin();
+                auto jtr = s.begin();
+                while (itr != p_str.end() && jtr != s.end() && *itr == *jtr)
+                {
+                    ++itr;
+                    ++jtr;
+                }
+                if (itr == p_str.end())
+                {
+                    symbols r = symbols(jtr, s.end());
+                    return pair_list<std::string,symbols>(std::make_pair(p_str, r));
+                }
+                else
+                {
+                    return pair_list<std::string,symbols>();
+                }
+            };
         }
 
         parser<char> oneof(std::string p_chars)

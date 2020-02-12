@@ -2,10 +2,12 @@
 #include "varoom/util/files.hpp"
 #include "varoom/util/ranges.hpp"
 #include "varoom/util/table.hpp"
+#include "varoom/seq/genome_map.hpp"
 
 #include <cmath>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <boost/flyweight.hpp>
 
 using namespace std;
@@ -18,6 +20,14 @@ namespace // anonymous
     using strings = vector<string>;
 
     using atom = boost::flyweight<std::string>;
+
+    struct range_hash
+    {
+        size_t operator()(const varoom::ranges_builder::range& p_range) const
+        {
+            return p_range.first ^ p_range.second;
+        }
+    };
 
     struct refgene :  varoom::table<uint32_t,std::string,atom,atom,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,std::string,std::string,uint32_t,std::string,atom,atom,std::string>
     {
@@ -65,6 +75,8 @@ namespace // anonymous
 
         virtual void operator()()
         {
+            const varoom::seq::genome_map& hg19 = varoom::seq::genome_map::hg19();
+
             std::unordered_map<atom,std::map<tx_range,tx_tuples>> data;
 
             {
@@ -78,15 +90,29 @@ namespace // anonymous
                 table_utils::for_each(g, f);
             }
 
+            uint64_t n = 0;
+            uint64_t w = 0;
+            ranges_builder R;
             vector<subtext> exs;
             vector<subtext> exe;
             for (auto itr = data.begin(); itr != data.end(); ++itr)
             {
-                ranges_builder R;
+                std::unordered_set<ranges_builder::range,range_hash> seen;
+
                 for (auto jtr = itr->second.begin(); jtr != itr->second.end(); ++jtr)
                 {
-                    ranges_builder::range x(jtr->first.first, jtr->first.second);
+                    ranges_builder::range x;
+                    x.first = hg19.chrom2genome(itr->first, jtr->first.first - 1);
+                    x.second = hg19.chrom2genome(itr->first, jtr->first.second - 1);
+                    if (seen.count(x))
+                    {
+                        continue;
+                    }
+                    seen.insert(x);
                     R.insert(x);
+                    n += 1;
+                    w += x.second - x.first;
+                    continue;
                     for (size_t i = 0; i < jtr->second.size(); ++i)
                     {
                         const refgene::tuple& t = jtr->second[i];
@@ -104,12 +130,61 @@ namespace // anonymous
                             }
                             ranges_builder::range ex;
                             ex.first = lexical_cast<size_t>(make_iterator_range(exs[j].first, exs[j].second));
+                            ex.first = hg19.chrom2genome(itr->first, ex.first - 1);
                             ex.second = lexical_cast<size_t>(make_iterator_range(exe[j].first, exe[j].second));
-                            R.insert(x);
+                            ex.second = hg19.chrom2genome(itr->first, ex.second - 1);
+                            if (seen.count(ex))
+                            {
+                                continue;
+                            }
+                            seen.insert(ex);
+                            R.insert(ex);
+                            n += 1;
+                            w += ex.second - ex.first;
                         }
                     }
                 }
             }
+
+            varoom::ranges r;
+            r.make(R);
+            output_file_holder_ptr outp = files::out(m_output_filename);
+            r.save(**outp);
+
+            nlohmann::json s = r.stats();
+            s["C"] = w;
+            s["N"] = n;
+
+            size_t mB = s["B"]["memory"];
+            size_t mE = s["E"]["memory"];
+            size_t mTi = s["Ti"]["memory"];
+            size_t mTe = s["Te"]["memory"];
+            size_t m = mB + mE + mTi + mTe;
+
+            std::vector<uint64_t> h = s["Ti"]["hist"];
+
+            uint64_t hs = 0;
+            uint64_t hn = 0;
+            uint64_t hm = h.size() - 1;
+            for (size_t j = 0; j < h.size(); ++j)
+            {
+                if (h[j] == 0)
+                {
+                    continue;
+                }
+                hs += j*h[j];
+                hn += h[j];
+            }
+
+            std::cerr << hg19.size()
+                << '\t' << n
+                << '\t' << (double(w)/double(hg19.size()))
+                << '\t' << (double(s["Ti"]["count"])/double(s["Ti"]["size"]))
+                << '\t' << (double(hs)/double(hn))
+                << '\t' << hm
+                << '\t' << (double(m)/double(1024*1024))
+                << '\t' << (double(m)/double(n))
+                << std::endl;
         }
 
     private:

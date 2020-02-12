@@ -31,6 +31,14 @@ namespace varoom
             
             virtual void sub(const std::string& p_chr, const std::int64_t p_pos, const std::string& p_ref, const std::string& p_alt)
             {
+                hgvsg_locus g(p_pos);
+                auto txs = lookup(p_chr, g);
+                for (auto itr = txs.begin(); itr != txs.end(); ++itr)
+                {
+                    const transcript& tx = *itr;
+                    hgvsc_locus c = tx.to_hgvsc_locus(g);
+                    m_handler.sub(tx.accession(), c, tx.to_strand(p_ref), tx.to_strand(p_alt));
+                }
             }
 
             virtual void ins(const std::string& p_chr, const std::int64_t p_after, const std::int64_t p_before, const std::string& p_alt)
