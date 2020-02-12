@@ -78,6 +78,52 @@ namespace varoom
                 }, +digit());
             }
 
+            static varoom::funds::parser<accession> accn()
+            {
+                using namespace varoom::funds;
+                std::function<std::string(char,std::string)> f = &cat;
+                parser<std::string> part1 = seq<std::string>(alpha(), *alnum(), f);
+                parser<std::string> part2 = seq<std::string>(sym('_'), *alnum(), f);
+                parser<uint64_t> part3 = seq<uint64_t>(sym('.'), num(), [](char c, uint64_t n) {
+                    return n;
+                });
+                return altx({
+                    seq<accession>(part1, part2, part3, [](std::string p1, std::string p2, uint64_t v) {
+                        return accession{p1+p2, v};
+                    }),
+                    seq<accession>(part1, part2, [](std::string p1, std::string p2) {
+                        return accession{p1+p2, 0};
+                    }),
+                    seq<accession>(part1, [](std::string p1) {
+                        return accession{p1, 0};
+                    }),
+                });
+            }
+
+            static varoom::funds::parser<nucleotide> nuc()
+            {
+                using namespace varoom::funds;
+                parser<char> s = sym();
+                return sat(s, [](char c) {
+                    switch (c)
+                    {
+                        case 'A':
+                        case 'a':
+                        case 'C':
+                        case 'c':
+                        case 'G':
+                        case 'g':
+                        case 'T':
+                        case 't':
+                        case 'N':
+                        case 'n':
+                            return true;
+                        default:
+                            return false;
+                    }
+                });
+            }
+
             static std::string cat(char c, std::string s)
             {
                 std::string r;
@@ -103,7 +149,7 @@ namespace varoom
             static varoom::funds::parser<hgvsg::reference> ref()
             {
                 using namespace varoom::funds;
-                return yield<parser,hgvsg::reference>(hgvsg::reference{"wibble", 42});
+                return fmap([](accession a) { return hgvsg::reference{a.name, a.version}; }, grammar_basics::accn());
             }
         };
 
@@ -226,8 +272,8 @@ namespace varoom
             static varoom::funds::parser<variant_ptr> g_single()
             {
                 using namespace varoom::funds;
-                return (seq<genomic_ref>(ref<hgvsg>(), str(":g."),
-                    [](genomic_ref acc, std::string) { return acc; }) >>= [](genomic_ref acc) {
+                return (seq<genomic_reference>(ref<hgvsg>(), str(":g."),
+                    [](genomic_reference acc, std::string) { return acc; }) >>= [](genomic_reference acc) {
                         return change<hgvsg>(acc);
                     });
             }
@@ -315,7 +361,7 @@ namespace varoom
             }
 
             template <typename X>
-            static varoom::funds::parser<variant_ptr> con(genomic_ref acc)
+            static varoom::funds::parser<variant_ptr> con(typename X::reference acc)
             {
                 using locus = typename X::locus;
                 using ref_and_loc = typename X::ref_and_loc;
@@ -381,52 +427,6 @@ namespace varoom
             static varoom::funds::parser<typename X::reference> ref()
             {
                 return grammar_traits<X>::ref();
-            }
-
-            static varoom::funds::parser<accession> accn()
-            {
-                using namespace varoom::funds;
-                std::function<std::string(char,std::string)> f = &cat;
-                parser<std::string> part1 = seq<std::string>(alpha(), *alnum(), f);
-                parser<std::string> part2 = seq<std::string>(sym('_'), *alnum(), f);
-                parser<uint64_t> part3 = seq<uint64_t>(sym('.'), num(), [](char c, uint64_t n) {
-                    return n;
-                });
-                return altx({
-                    seq<accession>(part1, part2, part3, [](std::string p1, std::string p2, uint64_t v) {
-                        return accession{p1+p2, v};
-                    }),
-                    seq<accession>(part1, part2, [](std::string p1, std::string p2) {
-                        return accession{p1+p2, 0};
-                    }),
-                    seq<accession>(part1, [](std::string p1) {
-                        return accession{p1, 0};
-                    }),
-                });
-            }
-
-            static varoom::funds::parser<nucleotide> nuc()
-            {
-                using namespace varoom::funds;
-                parser<char> s = sym();
-                return sat(s, [](char c) {
-                    switch (c)
-                    {
-                        case 'A':
-                        case 'a':
-                        case 'C':
-                        case 'c':
-                        case 'G':
-                        case 'g':
-                        case 'T':
-                        case 't':
-                        case 'N':
-                        case 'n':
-                            return true;
-                        default:
-                            return false;
-                    }
-                });
             }
 
         };
