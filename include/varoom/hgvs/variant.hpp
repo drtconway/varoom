@@ -15,6 +15,14 @@ namespace varoom
             uint64_t version;
         };
 
+        enum tx_section { UTR5, TR, UTR3 };
+        struct spliced_position
+        {
+            tx_section sec;
+            int64_t pos;
+            int64_t off;
+        };
+
         using nucleotide = char;
         using nucleotides = std::string;
 
@@ -28,6 +36,14 @@ namespace varoom
         {
             using reference = genomic_reference;
             using position = uint64_t;
+            using locus = std::pair<position,position>;
+            using ref_and_loc = std::pair<reference,locus>;
+        };
+
+        struct hgvsc : variant
+        {
+            using reference = genomic_reference;
+            using position = spliced_position;
             using locus = std::pair<position,position>;
             using ref_and_loc = std::pair<reference,locus>;
         };

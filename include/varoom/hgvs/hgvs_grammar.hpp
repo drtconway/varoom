@@ -78,6 +78,29 @@ namespace varoom
                 }, +digit());
             }
 
+            static varoom::funds::parser<spliced_position> spos()
+            {
+                using namespace varoom::funds;
+                parser<int64_t> utr5 = seq<int64_t>(sym('-'), num(), [](char, uint64_t x) { return -int64_t(x); });
+                parser<int64_t> utr3 = seq<int64_t>(sym('*'), num(), [](char, uint64_t x) { return int64_t(x); });
+                parser<int64_t> off = seq<int64_t>(oneof("+-"), num(), [](char s, uint64_t x) {
+                    int64_t y = x;
+                    return (s == '+' ? y : -y);
+                });
+
+                return seq<spliced_position>(altx({
+                        fmap([](int64_t x) { return spliced_position{UTR5, x, 0}; }, utr5),
+                        fmap([](int64_t x) { return spliced_position{UTR3, x, 0}; }, utr3),
+                        fmap([](uint64_t x) { return spliced_position{TR, int64_t(x), 0}; }, num())
+                    }), optional(off), [](spliced_position r, maybe<int64_t> moff) {
+                        if (!moff.nothing())
+                        {
+                            r.off = moff.just();
+                        }
+                        return r;
+                    });
+            }
+
             static varoom::funds::parser<accession> accn()
             {
                 using namespace varoom::funds;
@@ -150,6 +173,22 @@ namespace varoom
             {
                 using namespace varoom::funds;
                 return fmap([](accession a) { return hgvsg::reference{a.name, a.version}; }, grammar_basics::accn());
+            }
+        };
+
+        template <>
+        struct grammar_traits<hgvsc>
+        {
+            static varoom::funds::parser<hgvsc::position> pos()
+            {
+                using namespace varoom::funds;
+                return grammar_basics::spos();
+            }
+
+            static varoom::funds::parser<hgvsc::reference> ref()
+            {
+                using namespace varoom::funds;
+                return fmap([](accession a) { return hgvsc::reference{a.name, a.version}; }, grammar_basics::accn());
             }
         };
 
