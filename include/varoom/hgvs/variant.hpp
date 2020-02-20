@@ -5,10 +5,42 @@
 #include <string>
 #include <vector>
 
+#ifndef VAROOM_UTIL_STRONG_TYPEDEF_HPP
+#include "varoom/util/strong_typedef.hpp"
+#endif
+
 namespace varoom
 {
     namespace hgvs
     {
+        struct position
+        {
+            virtual ~position() {}
+        };
+
+        struct genomic_position : position
+        {
+        };
+        using genomic_position_ptr = std::shared_ptr<genomic_position>;
+
+        struct known_genomic_position : genomic_position, strong_typedef<known_genomic_position, uint64_t>
+        {
+            using strong_typedef::strong_typedef;
+        };
+
+        struct unknown_genomic_position : genomic_position { };
+        
+        struct uncertain_genomic_position : genomic_position
+        {
+            genomic_position_ptr first;
+            genomic_position_ptr last;
+
+            uncertain_genomic_position(genomic_position_ptr fst, genomic_position_ptr lst)
+                : first(fst), last(lst)
+            {
+            }
+        };
+
         struct genomic_reference
         {
             std::string name;
@@ -38,6 +70,24 @@ namespace varoom
             using position = uint64_t;
             using locus = std::pair<position,position>;
             using ref_and_loc = std::pair<reference,locus>;
+            static constexpr char marker = 'g';
+
+            using general_position = genomic_position_ptr;
+
+            static general_position make_known(position p)
+            {
+                return general_position(new known_genomic_position(p));
+            }
+
+            static general_position make_unknown()
+            {
+                return general_position(new unknown_genomic_position);
+            }
+
+            static general_position make_uncertain(general_position fst, general_position lst)
+            {
+                return general_position(new uncertain_genomic_position(fst, lst));
+            }
         };
 
         struct hgvsc : variant
@@ -46,6 +96,7 @@ namespace varoom
             using position = spliced_position;
             using locus = std::pair<position,position>;
             using ref_and_loc = std::pair<reference,locus>;
+            static constexpr char marker = 'c';
         };
 
         template <typename X>

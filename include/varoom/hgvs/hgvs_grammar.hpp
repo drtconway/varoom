@@ -238,6 +238,16 @@ namespace varoom
              *
              * <t>_loc <- <t>_pos ('_' <t>_pos)?      == <t>_interval | <t>_pos
              *
+             * <t>_general_pos <- <t>_known_pos | <t>_unknown_pos | <t>_uncertain_pos
+             *
+             * <t>_known_pos <- <t>_pos
+             *
+             * g_unknown_pos <- '?'
+             *
+             * g_known_or_unknown_pos <- g_known_pos | g_unknown_pos
+             *
+             * g_uncertain_pos <- '(' g_known_or_unknown_pos '_' g_known_or_unknown_pos ')'
+             *
              * g_pos <- num
              *
              * c_pos <- s_pos
@@ -308,13 +318,26 @@ namespace varoom
             }
 #endif
 
+            template <typename X>
+            static varoom::funds::parser<variant_ptr> single()
+            {
+                using namespace varoom::funds;
+                return (seq<typename X::reference>(ref<X>(), sym(':'), sym(X::marker), sym('.'),
+                        [](typename X::reference acc, char, char, char) { return acc; }) >>= [](typename X::reference acc) {
+                            return change<X>(acc);
+                    });
+            }
+
             static varoom::funds::parser<variant_ptr> g_single()
             {
                 using namespace varoom::funds;
-                return (seq<genomic_reference>(ref<hgvsg>(), str(":g."),
-                    [](genomic_reference acc, std::string) { return acc; }) >>= [](genomic_reference acc) {
-                        return change<hgvsg>(acc);
-                    });
+                return single<hgvsg>();
+            }
+
+            static varoom::funds::parser<variant_ptr> c_single()
+            {
+                using namespace varoom::funds;
+                return single<hgvsc>();
             }
 
             template <typename X>
@@ -453,6 +476,52 @@ namespace varoom
                 using namespace varoom::funds;
                 return seq<locus>(pos<X>(), sym('_'), pos<X>(), [](position f, char c, position l) {
                     return locus(f, l);
+                });
+            }
+            
+            template <typename X>
+            static varoom::funds::parser<typename X::general_position> general_pos()
+            {
+                using namespace varoom::funds;
+                return altx({known_pos<X>(), unknown_pos<X>(), uncertain_pos<X>()});
+            }
+
+            template <typename X>
+            static varoom::funds::parser<typename X::general_position> known_pos()
+            {
+                using general_position = typename X::general_position;
+                using namespace varoom::funds;
+                return seq<general_position>(pos<X>(), [](typename X::position p) {
+                    return X::make_known(p);
+                });
+            }
+
+            template <typename X>
+            static varoom::funds::parser<typename X::general_position> unknown_pos()
+            {
+                using general_position = typename X::general_position;
+
+                using namespace varoom::funds;
+                return seq<general_position>(sym('?'), [](char) {
+                    return X::make_unknown();
+                });
+            }
+
+            template <typename X>
+            static varoom::funds::parser<typename X::general_position> known_or_unknown_pos()
+            {
+                using namespace varoom::funds;
+                return altx({known_pos<X>(), unknown_pos<X>()});
+            }
+
+            template <typename X>
+            static varoom::funds::parser<typename X::general_position> uncertain_pos()
+            {
+                using general_position = typename X::general_position;
+                using namespace varoom::funds;
+                return seq<general_position>(sym('('), known_or_unknown_pos<X>(), sym('_'), known_or_unknown_pos<X>(), sym(')'),
+                    [](char, general_position fst, char, general_position lst, char) {
+                        return X::make_uncertain(fst, lst);
                 });
             }
 
