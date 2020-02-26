@@ -157,22 +157,42 @@ namespace varoom
             }
         };
 
-        template <typename X>
-        struct grammar_traits {};
+        template <typename PosType>
+        struct grammar_position_traits {};
 
         template <>
-        struct grammar_traits<hgvsg>
+        struct grammar_position_traits<simple_genomic_position>
         {
-            static varoom::funds::parser<hgvsg::position> pos()
+            static varoom::funds::parser<simple_genomic_position> pos()
             {
                 using namespace varoom::funds;
-                return fmap([](int64_t x) { return hgvsg::position(uint64_t(x)); }, grammar_basics::num());
+                return fmap([](int64_t x) { return simple_genomic_position(uint64_t(x)); }, grammar_basics::num());
+            }
+        };
+
+        template <typename RefType>
+        struct grammar_reference_traits {};
+
+        template <>
+        struct grammar_reference_traits<genomic_reference>
+        {
+            static varoom::funds::parser<genomic_reference> ref()
+            {
+                return fmap([](accession a) { return genomic_reference{a.name, a.version}; }, grammar_basics::accn());
+            }
+        };
+
+        template <typename X>
+        struct grammar_traits
+        {
+            static varoom::funds::parser<typename X::position> pos()
+            {
+                return grammar_position_traits<typename X::position>::pos();
             }
 
-            static varoom::funds::parser<hgvsg::reference> ref()
+            static varoom::funds::parser<typename X::reference> ref()
             {
-                using namespace varoom::funds;
-                return fmap([](accession a) { return hgvsg::reference{a.name, a.version}; }, grammar_basics::accn());
+                return grammar_reference_traits<typename X::reference>::ref();
             }
         };
 
@@ -331,7 +351,7 @@ namespace varoom
             static varoom::funds::parser<variant_ptr> g_single()
             {
                 using namespace varoom::funds;
-                return single<hgvsg>();
+                return single<hgvsg<>>();
             }
 
             static varoom::funds::parser<variant_ptr> c_single()

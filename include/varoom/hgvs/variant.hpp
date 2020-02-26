@@ -13,29 +13,34 @@ namespace varoom
 {
     namespace hgvs
     {
-        struct position
-        {
-            virtual ~position() {}
-        };
-
-        struct genomic_position : position
-        {
-        };
-        using genomic_position_ptr = std::shared_ptr<genomic_position>;
-
-        struct known_genomic_position : genomic_position, strong_typedef<known_genomic_position, uint64_t>
+        struct simple_genomic_position : strong_typedef<simple_genomic_position, uint64_t>
         {
             using strong_typedef::strong_typedef;
         };
 
-        struct unknown_genomic_position : genomic_position { };
-        
-        struct uncertain_genomic_position : genomic_position
+        struct generalised_position
         {
-            genomic_position_ptr first;
-            genomic_position_ptr last;
+            virtual ~generalised_position() {}
+        };
 
-            uncertain_genomic_position(genomic_position_ptr fst, genomic_position_ptr lst)
+        struct generalised_genomic_position : generalised_position
+        {
+        };
+        using generalised_genomic_position_ptr = std::shared_ptr<generalised_genomic_position>;
+
+        struct known_genomic_position : generalised_genomic_position, strong_typedef<known_genomic_position, uint64_t>
+        {
+            using strong_typedef::strong_typedef;
+        };
+
+        struct unknown_genomic_position : generalised_genomic_position { };
+        
+        struct uncertain_genomic_position : generalised_genomic_position
+        {
+            generalised_genomic_position_ptr first;
+            generalised_genomic_position_ptr last;
+
+            uncertain_genomic_position(generalised_genomic_position_ptr fst, generalised_genomic_position_ptr lst)
                 : first(fst), last(lst)
             {
             }
@@ -64,15 +69,16 @@ namespace varoom
         };
         using variant_ptr = std::shared_ptr<variant>;
 
+        template <typename PosKind = simple_genomic_position>
         struct hgvsg : variant
         {
             using reference = genomic_reference;
-            using position = uint64_t;
+            using position = PosKind;
             using locus = std::pair<position,position>;
             using ref_and_loc = std::pair<reference,locus>;
             static constexpr char marker = 'g';
 
-            using general_position = genomic_position_ptr;
+            using general_position = generalised_genomic_position_ptr;
 
             static general_position make_known(position p)
             {
