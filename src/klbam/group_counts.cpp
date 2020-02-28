@@ -37,7 +37,7 @@ namespace // anonymous
             for (auto itr = bldrs.begin(); itr != bldrs.end(); ++itr)
             {
                 m_ranges[itr->first].make(itr->second);
-                std::cerr << itr->first << '\t' << itr->second.size() << std::endl;
+                //std::cerr << itr->first << '\t' << itr->second.size() << std::endl;
             }
         }
 
@@ -107,16 +107,16 @@ namespace // anonymous
                 counts::istream_reader in(**inp, true);
                 table_utils::for_each(in, f);
 
-                std::cerr << "finished reading" << std::endl;
+                //std::cerr << "finished reading" << std::endl;
             }
 
-            std::cerr << "opening " << m_output_filename << std::endl;
+            //std::cerr << "opening " << m_output_filename << std::endl;
             output_file_holder_ptr outp = files::out(m_output_filename);
             genes::ostream_writer out(**outp, genes::labels());
-            std::cerr << "writing " << res.size() << " items." << std::endl;
+            //std::cerr << "writing " << res.size() << " items." << std::endl;
             for (auto itr = res.begin(); itr != res.end(); ++itr)
             {
-                std::cerr << itr->first << '\t' << itr->second.first << '\t' << itr->second.second << std::endl;
+                //std::cerr << itr->first << '\t' << itr->second.first << '\t' << itr->second.second << std::endl;
                 genes::tuple r;
                 std::get<genes::gene>(r) = itr->first;
                 std::get<genes::len>(r) = itr->second.first;
