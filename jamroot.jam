@@ -27,6 +27,7 @@ lib divsufsort64 : : <name>divsufsort64 ;
 exe klbam
     : src/klbam.cpp
       src/klbam/count_bases.cpp
+      src/klbam/group_counts.cpp
       src/klbam/merge_counts.cpp
       src/klbam/sample_dist.cpp
       src/klbam/fit_gamma.cpp

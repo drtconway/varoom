@@ -64,6 +64,25 @@ namespace varoom
             }
         };
 
+        struct genes :  varoom::table<std::string,uint64_t,uint64_t>
+        {
+            using tuple = tuple_type;
+            using table = basic_inmemory_table;
+            using istream_reader = basic_istream_table;
+            using ostream_writer = basic_ostream_table;
+            using read_iterator = basic_read_iterator;
+            using write_iterator = basic_write_iterator;
+
+            static constexpr std::size_t gene = 0;
+            static constexpr std::size_t len = 1;
+            static constexpr std::size_t cnt  = 2;
+
+            static std::initializer_list<std::string> labels()
+            {
+                return {"gene", "len", "cnt"};
+            }
+        };
+
         struct scores : varoom::table<chrom,uint32_t,double,double>
         {
             using tuple = tuple_type;
