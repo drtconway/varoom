@@ -34,7 +34,6 @@ exe klbam
       src/klbam/sample_pval.cpp
       src/klbam/sample_annot.cpp
       src/klbam/sample_vcf.cpp
-      src/klbam/score_count_groups.cpp
       boost_iostreams boost_log boost_program_options
       boost_filesystem boost_system
       htslib pthread sdsl divsufsort divsufsort64
