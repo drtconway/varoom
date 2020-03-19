@@ -166,7 +166,7 @@ namespace varoom
             gzip_output_file_holder(const std::string& p_name)
                 : m_file(p_name, std::ios_base::out | std::ios_base::binary)
             {
-                m_filter.push(m_gzip);
+                m_filter.push(boost::iostreams::gzip_compressor());
                 m_filter.push(m_file);
             }
 
@@ -175,9 +175,12 @@ namespace varoom
                 return m_filter;
             }
 
+            ~gzip_output_file_holder()
+            {
+            }
+
         private:
             std::ofstream m_file;
-            boost::iostreams::gzip_compressor m_gzip;
             boost::iostreams::filtering_ostream m_filter;
         };
 

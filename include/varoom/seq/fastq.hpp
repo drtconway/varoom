@@ -104,6 +104,18 @@ namespace varoom
             std::string m_next;
             fastq_read m_curr;
         };
+
+        class fastq_writer
+        {
+        public:
+            static void write(std::ostream& p_out, const fastq_read& p_read)
+            {
+                p_out << '@' << std::get<0>(p_read) << std::endl;
+                p_out << std::get<1>(p_read) << std::endl;
+                p_out << '+' << std::get<2>(p_read) << std::endl;
+                p_out << std::get<3>(p_read) << std::endl;
+            }
+        };
     }
     // namespace seq
 }

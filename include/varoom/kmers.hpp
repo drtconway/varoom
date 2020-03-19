@@ -54,6 +54,12 @@ namespace varoom
             return detail::rev_pairs(~p_x) >> (64 - 2*p_k);
         }
 
+        static kmer canonical(const size_t& p_k, const kmer& p_x)
+        {
+            kmer y = reverse_complement(p_k, p_x);
+            return std::min(p_x, y);
+        }
+
         static bool to_base(const char& p_c, kmer& p_x)
         {
             switch (p_c)

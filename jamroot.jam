@@ -34,6 +34,7 @@ exe klbam
       src/klbam/sample_pval.cpp
       src/klbam/sample_annot.cpp
       src/klbam/sample_vcf.cpp
+      src/klbam/score_count_groups.cpp
       boost_iostreams boost_log boost_program_options
       boost_filesystem boost_system
       htslib pthread sdsl divsufsort divsufsort64
@@ -51,6 +52,9 @@ exe mlstea
 exe varoom
     : src/varoom.cpp
       src/varoom/genome.cpp
+      src/varoom/pulldown.cpp
+      src/varoom/scatter.cpp
+      src/varoom/sketch.cpp
       src/varoom/tx.cpp
       boost_iostreams boost_log boost_program_options
       boost_filesystem boost_system
@@ -149,6 +153,12 @@ unit-test test_vcf_to_hgvsg
 
 unit-test test_kmer_accumulator
     : tests/kmers/test_kmer_accumulator.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
+unit-test test_minhash
+    : tests/kmers/test_minhash.cpp boost_test
       boost_iostreams boost_filesystem boost_system
       pthread
     ;
