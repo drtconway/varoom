@@ -5,8 +5,8 @@ ADD src/ src/
 ADD tests/ tests/
 ADD jamroot.jam jamroot.jam
 RUN b2 release && \
-    cp ./bin/gcc-7/release/klbam /bin && \
-    /gather_shared.sh /bin/klbam
+    cp ./bin/gcc-7/release/klbam ./bin/gcc-7/release/varoom /bin && \
+    /gather_shared.sh /bin/klbam /bin/varoom
 
 FROM ubuntu
 ADD misc/docker/unpack_shared.sh /unpack_shared.sh
