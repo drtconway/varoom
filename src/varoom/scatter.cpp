@@ -3,6 +3,8 @@
 #include "varoom/seq/fastq.hpp"
 #include "varoom/util/files.hpp"
 
+#include <boost/format.hpp>
+
 using namespace std;
 using namespace boost;
 using namespace varoom;
@@ -62,12 +64,11 @@ namespace // anonymous
             opts.add_options()
                 ("help,h", "produce help message")
                 ("input,i", po::value<string>()->default_value("-"), "input filename, defaults to '-' for stdin")
-                ("output,o", po::value<strings>(), "output filenames")
+                ("directory,d", po::value<string>(), "directory for output files")
+                ("number,n", po::value<int>()->default_value(2), "number of files to split the output into")
                 ;
 
             po::positional_options_description pos;
-            pos.add("input", 1);
-            pos.add("output", -1);
 
             po::variables_map vm;
             po::parsed_options parsed
@@ -83,8 +84,18 @@ namespace // anonymous
                 return params;
             }
 
+            int n = vm["number"].as<int>();
+            string d = vm["directory"].as<string>();
+
+            strings outputs;
+            for (int i = 0; i < n; ++i)
+            {
+                outputs.push_back(str(format("%s/part-%03d.fastq.gz") % d % i));
+            }
+
             params["input"] = vm["input"].as<string>();
-            params["output"] = vm["output"].as<strings>();
+            //params["output"] = vm["output"].as<strings>();
+            params["output"] = outputs;
 
             return params;
         }
