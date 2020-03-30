@@ -3,6 +3,9 @@
 #include "varoom/seq/fastq.hpp"
 #include "varoom/util/files.hpp"
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 #include <boost/format.hpp>
 
 using namespace std;
@@ -14,6 +17,104 @@ namespace // anonymous
 {
     using strings = vector<string>;
 
+    class read_box
+    {
+    public:
+        read_box()
+            : m_got_one(false), m_done(false)
+        {
+        }
+
+        void put(const fastq_read& p_read)
+        {
+            std::unique_lock<std::mutex> lk(m_mut);
+            while (m_got_one)
+            {
+                m_cond.wait(lk);
+            }
+            m_got_one = true;
+            m_read = p_read;
+            lk.unlock();
+            m_cond.notify_one();
+        }
+
+        void done()
+        {
+            std::unique_lock<std::mutex> lk(m_mut);
+            while (m_got_one)
+            {
+                m_cond.wait(lk);
+            }
+            m_done = true;
+            lk.unlock();
+            m_cond.notify_one();
+        }
+
+        bool get(fastq_read& p_read)
+        {
+            std::unique_lock<std::mutex> lk(m_mut);
+            while (!m_done && !m_got_one)
+            {
+                m_cond.wait(lk);
+            }
+            if (m_got_one)
+            {
+                p_read = m_read;
+                m_got_one = false;
+                lk.unlock();
+                m_cond.notify_one();
+                return true;
+            }
+            return false;
+        }
+
+    private:
+        std::mutex m_mut;
+        std::condition_variable m_cond;
+        bool m_got_one;
+        bool m_done;
+        fastq_read m_read;
+    };
+
+    class background_fastq_writer
+    {
+    public:
+        background_fastq_writer(const std::string& p_filename)
+            : m_output_holder(files::out(p_filename)), m_output(**m_output_holder)
+        {
+            m_thread = std::thread([this]() mutable {
+                fastq_read r;
+                while (m_box.get(r))
+                {
+                    fastq_writer::write(m_output, r);
+                }
+            });
+        }
+
+        ~background_fastq_writer()
+        {
+            m_box.done();
+            m_thread.join();
+        }
+
+        void write(const fastq_read& p_read)
+        {
+            m_box.put(p_read);
+        }
+
+        void close()
+        {
+            m_box.done();
+        }
+
+    private:
+        varoom::output_file_holder_ptr m_output_holder;
+        std::ostream& m_output;
+        read_box m_box;
+        std::thread m_thread;
+    };
+    using background_fastq_writer_ptr = std::shared_ptr<background_fastq_writer>;
+
     class scatter_command : public varoom::command
     {
     public:
@@ -23,6 +124,28 @@ namespace // anonymous
         {
         }
 
+        virtual void operator()()
+        {
+            vector<background_fastq_writer_ptr> outs;
+            for (size_t i = 0; i < m_output_filenames.size(); ++i)
+            {
+                outs.push_back(background_fastq_writer_ptr(new background_fastq_writer(m_output_filenames[i])));
+            }
+            const size_t N = outs.size();
+
+            input_file_holder_ptr inp = files::in(m_input_filename);
+
+            size_t n = 0;
+            for (fastq_reader r(**inp); r.more(); ++r, ++n)
+            {
+                while (n >= N)
+                {
+                    n -= N;
+                }
+                outs[n]->write(*r);
+            }
+        }
+#if 0
         virtual void operator()()
         {
             vector<output_file_holder_ptr> outs;
@@ -44,6 +167,7 @@ namespace // anonymous
                 fastq_writer::write(**(outs[n]), *r);
             }
         }
+#endif
 
     private:
         const string m_input_filename;
