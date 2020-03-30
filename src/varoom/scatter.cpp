@@ -5,6 +5,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <queue>
 #include <thread>
 #include <boost/format.hpp>
 
@@ -15,7 +16,68 @@ using namespace varoom::seq;
 
 namespace // anonymous
 {
+    using namespace std::chrono;
     using strings = vector<string>;
+    using timer = std::chrono::high_resolution_clock;
+
+    class read_multibox
+    {
+    public:
+        static constexpr size_t max_size = 10;
+
+        read_multibox()
+            : m_done(false)
+        {
+        }
+
+        void put(const fastq_read& p_read)
+        {
+            std::unique_lock<std::mutex> lk(m_mut);
+            while (m_reads.size() >= max_size)
+            {
+                m_cond.wait(lk);
+            }
+            m_reads.push(p_read);
+            lk.unlock();
+            m_cond.notify_one();
+        }
+
+        void done()
+        {
+            std::unique_lock<std::mutex> lk(m_mut);
+            while (m_reads.size() > 0)
+            {
+                m_cond.wait(lk);
+            }
+            m_done = true;
+            lk.unlock();
+            m_cond.notify_one();
+        }
+
+        bool get(fastq_read& p_read)
+        {
+            std::unique_lock<std::mutex> lk(m_mut);
+            while (!m_done && m_reads.size() == 0)
+            {
+                m_cond.wait(lk);
+            }
+            if (m_reads.size() > 0)
+            {
+                p_read = m_reads.front();
+                m_reads.pop();
+                lk.unlock();
+                m_cond.notify_one();
+                return true;
+            }
+            return false;
+        }
+
+    private:
+        std::mutex m_mut;
+        std::condition_variable m_cond;
+        bool m_done;
+        std::queue<fastq_read> m_reads;
+    };
 
     class read_box
     {
@@ -110,7 +172,7 @@ namespace // anonymous
     private:
         varoom::output_file_holder_ptr m_output_holder;
         std::ostream& m_output;
-        read_box m_box;
+        read_multibox m_box;
         std::thread m_thread;
     };
     using background_fastq_writer_ptr = std::shared_ptr<background_fastq_writer>;
@@ -124,6 +186,7 @@ namespace // anonymous
         {
         }
 
+#if 1
         virtual void operator()()
         {
             vector<background_fastq_writer_ptr> outs;
@@ -135,6 +198,7 @@ namespace // anonymous
 
             input_file_holder_ptr inp = files::in(m_input_filename);
 
+            auto t0 = timer::now();
             size_t n = 0;
             for (fastq_reader r(**inp); r.more(); ++r, ++n)
             {
@@ -144,7 +208,11 @@ namespace // anonymous
                 }
                 outs[n]->write(*r);
             }
+            auto t1 = timer::now();
+            double d = duration_cast<milliseconds>(t1-t0).count() / 1000.0;
+            std::cerr << "elapsed time: " << d << std::endl;
         }
+#endif
 #if 0
         virtual void operator()()
         {
@@ -157,6 +225,7 @@ namespace // anonymous
 
             input_file_holder_ptr inp = files::in(m_input_filename);
 
+            auto t0 = timer::now();
             size_t n = 0;
             for (fastq_reader r(**inp); r.more(); ++r, ++n)
             {
@@ -166,6 +235,9 @@ namespace // anonymous
                 }
                 fastq_writer::write(**(outs[n]), *r);
             }
+            auto t1 = timer::now();
+            double d = duration_cast<milliseconds>(t1-t0).count() / 1000.0;
+            std::cerr << "elapsed time: " << d << std::endl;
         }
 #endif
 
