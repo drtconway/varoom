@@ -20,14 +20,27 @@ namespace // anonymous
     using strings = vector<string>;
     using timer = std::chrono::high_resolution_clock;
 
+    map<size_t,size_t> counts;
+
     class read_multibox
     {
     public:
-        static constexpr size_t max_size = 10;
+        static constexpr size_t max_size = 100;
 
         read_multibox()
             : m_done(false)
         {
+        }
+
+        ~read_multibox()
+        {
+            if (0)
+            {
+                for (auto itr = m_counts.begin(); itr != m_counts.end(); ++itr)
+                {
+                    counts[itr->first] += itr->second;
+                }
+            }
         }
 
         void put(const fastq_read& p_read)
@@ -37,7 +50,7 @@ namespace // anonymous
             {
                 m_cond.wait(lk);
             }
-            m_reads.push(p_read);
+            m_reads.push_back(p_read);
             lk.unlock();
             m_cond.notify_one();
         }
@@ -54,7 +67,7 @@ namespace // anonymous
             m_cond.notify_one();
         }
 
-        bool get(fastq_read& p_read)
+        bool get(vector<fastq_read>& p_reads)
         {
             std::unique_lock<std::mutex> lk(m_mut);
             while (!m_done && m_reads.size() == 0)
@@ -63,8 +76,12 @@ namespace // anonymous
             }
             if (m_reads.size() > 0)
             {
-                p_read = m_reads.front();
-                m_reads.pop();
+                if (0)
+                {
+                    m_counts[m_reads.size()] += 1;
+                }
+                m_reads.swap(p_reads);
+                m_reads.clear();
                 lk.unlock();
                 m_cond.notify_one();
                 return true;
@@ -76,7 +93,8 @@ namespace // anonymous
         std::mutex m_mut;
         std::condition_variable m_cond;
         bool m_done;
-        std::queue<fastq_read> m_reads;
+        std::vector<fastq_read> m_reads;
+        std::map<size_t,size_t> m_counts;
     };
 
     class read_box
@@ -144,11 +162,23 @@ namespace // anonymous
         background_fastq_writer(const std::string& p_filename)
             : m_output_holder(files::out(p_filename)), m_output(**m_output_holder)
         {
+ #if 0
             m_thread = std::thread([this]() mutable {
                 fastq_read r;
                 while (m_box.get(r))
                 {
                     fastq_writer::write(m_output, r);
+                }
+            });
+#endif
+            m_thread = std::thread([this]() mutable {
+                vector<fastq_read> rs;
+                while (m_box.get(rs))
+                {
+                    for (size_t i = 0; i < rs.size(); ++i)
+                    {
+                        fastq_writer::write(m_output, rs[i]);
+                    }
                 }
             });
         }
@@ -186,34 +216,44 @@ namespace // anonymous
         {
         }
 
-#if 1
+#if 0
         virtual void operator()()
         {
-            vector<background_fastq_writer_ptr> outs;
-            for (size_t i = 0; i < m_output_filenames.size(); ++i)
             {
-                outs.push_back(background_fastq_writer_ptr(new background_fastq_writer(m_output_filenames[i])));
-            }
-            const size_t N = outs.size();
-
-            input_file_holder_ptr inp = files::in(m_input_filename);
-
-            auto t0 = timer::now();
-            size_t n = 0;
-            for (fastq_reader r(**inp); r.more(); ++r, ++n)
-            {
-                while (n >= N)
+                vector<background_fastq_writer_ptr> outs;
+                for (size_t i = 0; i < m_output_filenames.size(); ++i)
                 {
-                    n -= N;
+                    outs.push_back(background_fastq_writer_ptr(new background_fastq_writer(m_output_filenames[i])));
                 }
-                outs[n]->write(*r);
+                const size_t N = outs.size();
+
+                input_file_holder_ptr inp = files::in(m_input_filename);
+
+                auto t0 = timer::now();
+                size_t n = 0;
+                for (fastq_reader r(**inp); r.more(); ++r, ++n)
+                {
+                    while (n >= N)
+                    {
+                        n -= N;
+                    }
+                    outs[n]->write(*r);
+                }
+                auto t1 = timer::now();
+                double d = duration_cast<milliseconds>(t1-t0).count() / 1000.0;
+                std::cerr << "elapsed time: " << d << std::endl;
             }
-            auto t1 = timer::now();
-            double d = duration_cast<milliseconds>(t1-t0).count() / 1000.0;
-            std::cerr << "elapsed time: " << d << std::endl;
+            if (0)
+            {
+                std::cerr << "block sizes:" << std::endl;
+                for (auto itr = counts.begin(); itr != counts.end(); ++itr)
+                {
+                    std::cerr << itr->first << '\t' << itr->second << std::endl;
+                }
+            }
         }
 #endif
-#if 0
+#if 1
         virtual void operator()()
         {
             vector<output_file_holder_ptr> outs;

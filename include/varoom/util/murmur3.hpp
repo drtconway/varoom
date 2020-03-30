@@ -35,7 +35,7 @@ namespace varoom
             k *= c2;
 
             h ^= k;
-            h = rotl(k, r2);
+            h = rotl(h, r2);
             h = (h * m) + n;
 
             l += 4;
