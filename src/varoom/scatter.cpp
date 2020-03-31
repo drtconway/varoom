@@ -25,7 +25,7 @@ namespace // anonymous
     class read_multibox
     {
     public:
-        static constexpr size_t max_size = 100;
+        static constexpr size_t max_size = 1000;
 
         read_multibox()
             : m_done(false)
