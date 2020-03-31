@@ -216,7 +216,7 @@ namespace // anonymous
         {
         }
 
-#if 0
+#if 1
         virtual void operator()()
         {
             {
@@ -253,7 +253,7 @@ namespace // anonymous
             }
         }
 #endif
-#if 1
+#if 0
         virtual void operator()()
         {
             vector<output_file_holder_ptr> outs;
