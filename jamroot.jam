@@ -50,6 +50,7 @@ exe mlstea
 
 exe varoom
     : src/varoom.cpp
+      src/varoom/annotate.cpp
       src/varoom/genome.cpp
       src/varoom/kmerize.cpp
       src/varoom/pulldown.cpp

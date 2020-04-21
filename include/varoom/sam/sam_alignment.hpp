@@ -15,7 +15,7 @@ namespace varoom
         std::string cigar;
         std::string mate_chr;
         uint32_t mate_pos;
-        uint32_t tlen;
+        int32_t tlen;
         std::string seq;
         std::string qual;
     };

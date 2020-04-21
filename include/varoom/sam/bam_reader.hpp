@@ -78,7 +78,15 @@ namespace varoom
             const uint8_t* q = bam_get_seq(m_aln);
 
             m_cur.flags = m_aln->core.flag;
-            m_cur.chr = m_hdr->target_name[m_aln->core.tid];
+            if (m_aln->core.tid >= 0)
+            {
+                m_cur.chr = m_hdr->target_name[m_aln->core.tid];
+            }
+            else
+            {
+                m_cur.chr.clear();
+                m_cur.chr.push_back('*');
+            }
             m_cur.pos = m_aln->core.pos + 1;
             m_cur.mapq = m_aln->core.qual;
 
@@ -96,7 +104,15 @@ namespace varoom
                 m_cur.cigar.push_back(op_ch);
             }
 
-            m_cur.mate_chr = m_hdr->target_name[m_aln->core.mtid];
+            if (m_aln->core.mtid >= 0)
+            {
+                m_cur.mate_chr = m_hdr->target_name[m_aln->core.mtid];
+            }
+            else
+            {
+                m_cur.mate_chr.clear();
+                m_cur.mate_chr.push_back('*');
+            }
             m_cur.mate_pos = m_aln->core.mpos + 1;
             m_cur.tlen = m_aln->core.isize;
 
