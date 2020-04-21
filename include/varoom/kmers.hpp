@@ -92,7 +92,7 @@ namespace varoom
 
         static void make(const std::string& p_seq, const size_t& p_k, std::function<void(kmer)> p_consumer)
         {
-            const kmer M = (1 << (2*p_k)) - 1;
+            const kmer M = (1ULL << (2*p_k)) - 1;
             kmer x = 0;
             size_t j = 0;
             for (auto s = p_seq.begin(); s != p_seq.end(); ++s)
@@ -116,7 +116,7 @@ namespace varoom
 
         static void make(const std::string& p_seq, const size_t& p_k, std::vector<kmer>& p_kmers)
         {
-            const kmer M = (1 << (2*p_k)) - 1;
+            const kmer M = (1ULL << (2*p_k)) - 1;
             p_kmers.clear();
             kmer x = 0;
             size_t j = 0;
@@ -143,7 +143,7 @@ namespace varoom
                          std::vector<kmer>& p_fwd,
                          std::vector<kmer>& p_rev)
         {
-            const kmer M = (1 << (2*p_k)) - 1;
+            const kmer M = (1ULL << (2*p_k)) - 1;
             const size_t S = 2*(p_k - 1);
             p_fwd.clear();
             p_rev.clear();

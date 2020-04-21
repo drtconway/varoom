@@ -8,6 +8,28 @@ namespace varoom
 {
     namespace util
     {
+        namespace detail
+        {
+            template <int I = 0> size_t bit_ceil(uint64_t x);
+
+            template <>
+            size_t bit_ceil<64>(uint64_t x)
+            {
+                return 64;
+            }
+
+            template <int I = 0>
+            size_t bit_ceil(uint64_t x)
+            {
+                if (x < (1ULL << I))
+                {
+                    return I;
+                }
+                return bit_ceil<I+1>(x);
+            }
+        }
+        // namespace detail
+
         class codec8
         {
         public:
