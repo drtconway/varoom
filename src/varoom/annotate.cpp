@@ -58,6 +58,7 @@ namespace // anonymous
         {
             input_file_holder_ptr inp = files::in(m_annot_filename);
 
+            auto T0 = timer::now();
             map<string,map<ranges::range,vector<string>>> lmap;
             map<string,ranges> rmap;
             {
@@ -92,16 +93,22 @@ namespace // anonymous
                     }
                 };
 
+                size_t n = 0;
+                size_t m = 0;
                 gff3_reader r(**inp);
                 while (r.next(f))
                 {
+                    ++n;
                     if (found == true)
                     {
+                        ++m;
                         ranges_builder::range g(a.start1, a.end1);
                         bldrs[a.chrom].insert(g);
                         lmap[a.chrom][g].push_back(a.label);
                     }
                 }
+                std::cerr << "processed entries: " << n << std::endl;
+                std::cerr << "matching entries: " << m << std::endl;
                 for (auto itr = bldrs.begin(); itr != bldrs.end(); ++itr)
                 {
                     rmap[itr->first].make(itr->second);
@@ -131,16 +138,13 @@ namespace // anonymous
                 }
             }
 
-            size_t hits = 0;
-            double hitTime = 0;
-            size_t misses = 0;
-            double missTime = 0;
-
             unordered_map<std::string,unordered_map<ranges::range,size_t>> A;
             vector<ranges::range> hitVec;
-            auto T0 = timer::now();
+            auto T1 = timer::now();
+            size_t n = 0;
             for (bam_reader r(m_input_filename); r.more(); ++r)
             {
+                ++n;
                 const sam_alignment& aln = *r;
                 if (sam_flags::is_unmapped(aln.flags))
                 {
@@ -156,14 +160,9 @@ namespace // anonymous
                 {
                     continue;
                 }
-                auto t0 = timer::now();
                 itr->second.ranges_at(rx.first, rx.second, hitVec);
-                auto t1 = timer::now();
-                std::chrono::duration<double> d = t1 - t0;
                 if (hitVec.size() != 0)
                 {
-                    hits += 1;
-                    hitTime += d.count();
                     for (size_t i = 0; i < hitVec.size(); ++i)
                     {
                         A[aln.chr][hitVec[i]] += 1;
@@ -178,13 +177,9 @@ namespace // anonymous
                         std::cout << aln.chr << '\t' << aln.pos << '\t' << jj << std::endl;
                     }
                 }
-                else
-                {
-                    misses += 1;
-                    missTime += d.count();
-                }
             }
-            auto T1 = timer::now();
+            std::cerr << "processed bam entries: " << n << std::endl;
+            auto T2 = timer::now();
             for (auto itr = lmap.begin(); itr != lmap.end(); ++itr)
             {
                 auto iitr = A.find(itr->first);
@@ -205,6 +200,10 @@ namespace // anonymous
                     }
                 }
             }
+            auto T3 = timer::now();
+            std::cerr << "creating range set: " << (1e-3*duration_cast<milliseconds>(T1 - T0).count()) << std::endl;
+            std::cerr << "scanning bam: " << (1e-3*duration_cast<milliseconds>(T2 - T1).count()) << std::endl;
+            std::cerr << "writing output: " << (1e-3*duration_cast<milliseconds>(T3 - T2).count()) << std::endl;
         }
 
     private:
