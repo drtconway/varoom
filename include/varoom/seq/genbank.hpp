@@ -10,6 +10,7 @@
 #include <vector>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/range/iterator_range.hpp>
 #include <nlohmann/json.hpp>
 
 namespace varoom

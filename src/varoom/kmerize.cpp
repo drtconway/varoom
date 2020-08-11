@@ -364,8 +364,8 @@ namespace // anonymous
             vector<kmer> rhsRev;
             if (1)
             {
-                input_file_holder_ptr inp1 = files::in("/media/sf_shared/SRR2052337_1.fastq.gz");
-                input_file_holder_ptr inp2 = files::in("/media/sf_shared/SRR2052337_2.fastq.gz");
+                input_file_holder_ptr inp1 = files::in("/data/work/her2-sra/ERR863738_1.fastq.gz");
+                input_file_holder_ptr inp2 = files::in("/data/work/her2-sra/ERR863738_1.fastq.gz");
                 fastq_reader r1(**inp1);
                 fastq_reader r2(**inp2);
                 size_t n = 0;

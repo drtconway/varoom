@@ -63,7 +63,7 @@ namespace // anonymous
 
         auto fst = rs.begin();
         auto snd = rs.end();
-        size_t count = distance(fst, snd);
+        size_t count = std::distance(fst, snd);
         while (count > 0)
         {
             auto it = fst;

@@ -172,6 +172,34 @@ namespace varoom
             }
         }
 
+        template <class X>
+        static void make(const std::string& p_seq, const size_t& p_k, X p_acceptor)
+        {
+            static_assert(std::is_convertible<X, std::function<void(kmer_and_pos)>>::value,
+                          "applicative requires a function type void(kmer_and_pos)");
+            const kmer M = (1ULL << (2*p_k)) - 1;
+            kmer x = 0;
+            size_t i = 0;
+            size_t j = 0;
+            for (auto s = p_seq.begin(); s != p_seq.end(); ++s, ++i)
+            {
+                kmer b;
+                if (!to_base(*s, b))
+                {
+                    x = 0;
+                    j = 0;
+                    continue;
+                }
+                x = (x << 2) | b;
+                ++j;
+                if (j == p_k)
+                {
+                    p_acceptor(kmer_and_pos(x & M, i - p_k + 1));
+                    --j;
+                }
+            }
+        }
+
         static void make(const std::string& p_seq, const size_t& p_k,
                          std::vector<kmer_and_pos>& p_fwd,
                          std::vector<kmer_and_pos>& p_rev)

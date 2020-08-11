@@ -53,6 +53,7 @@ exe varoom
       src/varoom/annotate.cpp
       src/varoom/genome.cpp
       src/varoom/kmerize.cpp
+      src/varoom/mutsig.cpp
       src/varoom/pulldown.cpp
       src/varoom/scatter.cpp
       src/varoom/sketch.cpp
@@ -248,6 +249,12 @@ unit-test test_locus_stream
       pthread
     ;
 
+#unit-test test_squeal_page
+#    : tests/squeal/test_squeal_page.cpp boost_test boost_iostreams pthread
+#      boost_iostreams boost_filesystem boost_system
+#      pthread
+#    ;
+
 unit-test test_vcf_info
     : tests/vcf/test_vcf_info.cpp boost_test
       boost_iostreams boost_filesystem boost_system
@@ -280,6 +287,12 @@ unit-test test_concurrent_deque
 
 unit-test test_elias_fano
     : tests/util/test_elias_fano.cpp boost_test
+      boost_iostreams boost_filesystem boost_system
+      pthread
+    ;
+
+unit-test test_file
+    : tests/util/test_file.cpp boost_test
       boost_iostreams boost_filesystem boost_system
       pthread
     ;

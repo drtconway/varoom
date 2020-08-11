@@ -8,6 +8,7 @@
 #include <set>
 #include <vector>
 #include <boost/lexical_cast.hpp>
+#include <boost/range/iterator_range.hpp>
 
 namespace // anonymous
 {

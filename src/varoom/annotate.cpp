@@ -28,6 +28,30 @@ namespace std
             return h1 ^ h2;
         }
     };
+
+    void print_row(std::ostream& p_out, const std::string& p_addr, size_t p_count, const std::string& p_ex, const map<string,vector<string>>& p_pmap)
+    {
+        vector<pair<string,string>> stk;
+        stk.push_back(pair<string,string>(p_ex, p_ex));
+        while (stk.size())
+        {
+            pair<string,string> itm = stk.back();
+            stk.pop_back();
+            auto itr = p_pmap.find(itm.first);
+            if (itr == p_pmap.end())
+            {
+                p_out << p_addr << '\t' << p_count << '\t' << itm.second << std::endl;
+                continue;
+            }
+            for (auto jtr = itr->second.begin(); jtr != itr->second.end(); ++jtr)
+            {
+                pair<string,string> jtm(*jtr, itm.second);
+                jtm.second += "\t";
+                jtm.second += *jtr;
+                stk.push_back(jtm);
+            }
+        }
+    }
 }
 // namespace std
 
@@ -47,22 +71,70 @@ namespace // anonymous
     class annotate_command : public varoom::command
     {
     public:
-        annotate_command(const string& p_input_filename, const string& p_annot_filename, const string& p_output_filename)
+        annotate_command(const string& p_input_filename, const string& p_annot_filename,
+                         const string& p_save_filename, const bool& p_load, const string& p_output_filename)
             : m_input_filename(p_input_filename),
               m_annot_filename(p_annot_filename),
+              m_save_filename(p_save_filename),
+              m_load(p_load),
               m_output_filename(p_output_filename)
         {
         }
 
         virtual void operator()()
         {
-            input_file_holder_ptr inp = files::in(m_annot_filename);
+            if (m_load && m_save_filename.size() > 0)
+            {
+                throw std::runtime_error("cannot save and load in the one command invocation");
+            }
 
             auto T0 = timer::now();
             map<string,map<ranges::range,vector<string>>> lmap;
             map<string,ranges> rmap;
+            map<string,vector<string>> pmap;
+
+            if (m_load)
             {
-                const std::string kind("gene");
+                input_file_holder_ptr inp = files::in(m_annot_filename);
+
+                blob::load(**inp, [&](std::istream& p_in) mutable {
+                    nlohmann::json jj;
+                    p_in >> jj;
+                    for (nlohmann::json::iterator itr = jj.begin(); itr != jj.end(); ++itr)
+                    {
+                        string k = itr.key();
+                        nlohmann::json v = itr.value();
+                        map<ranges::range,vector<string>> m;
+                        for (nlohmann::json::iterator jtr = v.begin(); jtr != v.end(); ++jtr)
+                        {
+                            ranges::range r((*jtr)[0][0], (*jtr)[0][1]);
+                            vector<string> s = (*jtr)[1];
+                            m[r] = s;
+                        }
+                        lmap[k] = m;
+                        rmap[k] = ranges();
+                    }
+                });
+
+                blob::load(**inp, [&](std::istream& p_in) mutable {
+                    nlohmann::json jj;
+                    p_in >> jj;
+                    for (nlohmann::json::iterator itr = jj.begin(); itr != jj.end(); ++itr)
+                    {
+                        string k = itr.key();
+                        vector<string> v = itr.value();
+                        pmap[k] = v;
+                    }
+                });
+                for (auto itr = rmap.begin(); itr != rmap.end(); ++itr)
+                {
+                    itr->second.load(**inp);
+                }
+            }
+            else
+            {
+                input_file_holder_ptr inp = files::in(m_annot_filename);
+                const std::string kind("exon");
                 map<std::string,ranges_builder> bldrs;
 
                 bool found = false;
@@ -71,25 +143,49 @@ namespace // anonymous
                              const uint64_t& p_start1, const uint64_t& p_end1, const std::string& p_score,
                              const std::string& p_strand, const std::string& p_phase,
                              const std::vector<attr_and_val>& p_attributes) mutable {
-                    if (p_type == kind)
+                    found = false;
+
+                    if (p_type != "exon" && p_type != "transcript" && p_type != "mRNA" && p_type != "gene")
+                    {
+                        return;
+                    }
+
+                    string id_str;
+                    string name_str;
+                    string parent_str;
+                    for (size_t i = 0; i < p_attributes.size(); ++i)
+                    {
+                        if (p_attributes[i].first == "Name")
+                        {
+                            name_str = p_attributes[i].second;
+                        }
+                        if (p_attributes[i].first == "ID")
+                        {
+                            id_str = p_attributes[i].second;
+                        }
+                        if (p_attributes[i].first == "Parent")
+                        {
+                            parent_str = p_attributes[i].second;
+                        }
+                    }
+                    if (id_str.size() == 0 && name_str.size() > 0)
+                    {
+                        id_str = name_str;
+                    }
+                    if (id_str.size() > 0)
+                    {
+                        if (parent_str.size() > 0)
+                        {
+                            pmap[id_str].push_back(parent_str);
+                        }
+                    }
+                    if (id_str.size() > 0 && p_type == kind)
                     {
                         a.chrom = p_seqid;
                         a.start1 = p_start1;
                         a.end1 = p_end1;
-                        a.label.clear();
-                        for (size_t i = 0; i < p_attributes.size(); ++i)
-                        {
-                            if (p_attributes[i].first == "Name")
-                            {
-                                a.label = p_attributes[i].second;
-                                break;
-                            }
-                        }
+                        a.label = id_str;
                         found = true;
-                    }
-                    else
-                    {
-                        found = false;
                     }
                 };
 
@@ -109,32 +205,40 @@ namespace // anonymous
                 }
                 std::cerr << "processed entries: " << n << std::endl;
                 std::cerr << "matching entries: " << m << std::endl;
+                std::cout << nlohmann::json(pmap) << std::endl;
                 for (auto itr = bldrs.begin(); itr != bldrs.end(); ++itr)
                 {
                     rmap[itr->first].make(itr->second);
                 }
-            }
 
-            if (0)
-            {
-                output_file_holder_ptr outp = files::out(m_output_filename);
-                blob::save(**outp, [&](std::ostream& p_out) {
-                    nlohmann::json jj = nlohmann::json::object();
-                    for (auto itr = lmap.begin(); itr != lmap.end(); ++itr)
-                    {
-                        nlohmann::json kk = nlohmann::json::array();
-                        for (auto jtr = itr->second.begin(); jtr != itr->second.end(); ++jtr)
-                        {
-                            nlohmann::json pp({jtr->first.first, jtr->first.second});
-                            kk.push_back(nlohmann::json({pp, jtr->second}));
-                        }
-                        jj[itr->first] = kk;
-                    }
-                    p_out << jj << std::endl;
-                });
-                for (auto itr = rmap.begin(); itr != rmap.end(); ++itr)
+                if (m_save_filename.size() > 0)
                 {
-                    itr->second.save(**outp);
+                    output_file_holder_ptr outp = files::out(m_save_filename);
+                    blob::save(**outp, [&](std::ostream& p_out) {
+                        nlohmann::json jj = nlohmann::json::object();
+                        for (auto itr = lmap.begin(); itr != lmap.end(); ++itr)
+                        {
+                            nlohmann::json kk = nlohmann::json::array();
+                            for (auto jtr = itr->second.begin(); jtr != itr->second.end(); ++jtr)
+                            {
+                                nlohmann::json pp({jtr->first.first, jtr->first.second});
+                                kk.push_back(nlohmann::json({pp, jtr->second}));
+                            }
+                            jj[itr->first] = kk;
+                        }
+                        p_out << jj << std::endl;
+                    });
+
+                    blob::save(**outp, [&](std::ostream& p_out) {
+                        nlohmann::json jj = pmap;
+                        p_out << jj << std::endl;
+                    });
+
+                    for (auto itr = rmap.begin(); itr != rmap.end(); ++itr)
+                    {
+                        itr->second.save(**outp);
+                    }
+                    return;
                 }
             }
 
@@ -154,7 +258,7 @@ namespace // anonymous
                 {
                     continue;
                 }
-                ranges::range rx(aln.pos, aln.pos + aln.tlen);
+                ranges::range rx(aln.pos, aln.pos + aln.seq.size());
                 auto itr = rmap.find(aln.chr);
                 if (itr == rmap.end())
                 {
@@ -196,7 +300,8 @@ namespace // anonymous
                     }
                     for (auto ktr = jtr->second.begin(); ktr != jtr->second.end(); ++ktr)
                     {
-                        std::cout << str(format("%s\t%s:%d-%d\t%d") % (*ktr) % itr->first % jtr->first.first % jtr->first.second % c) << std::endl;
+                        string addr = str(format("%s:%d-%d") % itr->first % jtr->first.first % jtr->first.second);
+                        print_row(std::cout, addr, c, *ktr, pmap);
                     }
                 }
             }
@@ -209,6 +314,8 @@ namespace // anonymous
     private:
         const string m_input_filename;
         const string m_annot_filename;
+        const string m_save_filename;
+        const bool m_load;
         const string m_output_filename;
     };
 
@@ -227,6 +334,8 @@ namespace // anonymous
                 ("help,h", "produce help message")
                 ("input,i", po::value<string>()->default_value("-"), "input filename, defaults to '-' for stdin")
                 ("annot,a", po::value<string>(), "filename for gff3 file with features to annotate")
+                ("save,S", po::value<string>(), "filename to save the indexed annotations to")
+                ("load,L", "if specified, use the annotation name to load pre-indexed annotations")
                 ("output,o", po::value<string>()->default_value("-"), "output filename, defaults to '-' for stdout")
                 ;
 
@@ -248,6 +357,15 @@ namespace // anonymous
 
             params["input"] = vm["input"].as<string>();
             params["annot"] = vm["annot"].as<string>();
+            if (vm.count("save"))
+            {
+                params["save"] = vm["save"].as<string>();
+            }
+            else
+            {
+                params["save"] = string("");
+            }
+            params["load"] = (vm.count("load") ? true : false);
             params["output"] = vm["output"].as<string>();
 
             return params;
@@ -261,8 +379,10 @@ namespace // anonymous
             }
             string input_fn = p_params["input"];
             string annot_fn = p_params["annot"];
+            string save_fn = p_params["save"];
+            bool load = p_params["load"];
             string output_fn = p_params["output"];
-            return command_ptr(new annotate_command(input_fn, annot_fn, output_fn));
+            return command_ptr(new annotate_command(input_fn, annot_fn, save_fn, load, output_fn));
         }
     };
     

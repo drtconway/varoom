@@ -720,11 +720,11 @@ namespace // anonymous
 
 BOOST_AUTO_TEST_CASE( enc1 )
 {
-    std::string s = run_model(17, 16*1024*1024);
+    std::string s = run_model(17, 1024*1024);
 
-    varoom::seq::kimmo::make(s, "tests/tmp/chrV.kimmo.gz");
+    varoom::seq::kimmo::make(s, "tests/tmp/chrV.kimmo");
 
-    varoom::seq::kimmo S("tests/tmp/chrV.kimmo.gz");
+    varoom::seq::kimmo S("tests/tmp/chrV.kimmo");
 
     BOOST_REQUIRE_EQUAL(S.size(), s.size());
     for (size_t i = 0; i < 10; ++i)
@@ -745,7 +745,7 @@ BOOST_AUTO_TEST_CASE( enc1 )
         BOOST_CHECK_EQUAL(S[j], s[j]);
     }
 
-    size_t M = 1000;
+    size_t M = 100;
     for (size_t i = 0; i < 100; ++i)
     {
         size_t j0 = Z(rng);

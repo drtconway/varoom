@@ -45,7 +45,7 @@ namespace varoom
             {
                 if (p_pos >= size(p_chr))
                 {
-                    std::cerr << p_chr << ':' << p_pos << " (" << size(p_chr) << ")" << std::endl;
+                    //std::cerr << p_chr << ':' << p_pos << " (" << size(p_chr) << ")" << std::endl;
                     throw std::runtime_error("position out of range for chromosome.");
                 }
                 return m_toc.at(p_chr) + p_pos;

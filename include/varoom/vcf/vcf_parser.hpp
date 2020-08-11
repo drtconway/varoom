@@ -10,6 +10,7 @@
 #endif
 
 #include <iostream>
+#include <boost/range/iterator_range.hpp>
 
 namespace varoom
 {

@@ -1,6 +1,7 @@
 #include "varoom/util/gdbm.hpp"
 #include "varoom/util/files.hpp"
 #include <boost/lexical_cast.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE gdbm tests

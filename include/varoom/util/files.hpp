@@ -145,7 +145,7 @@ namespace varoom
             gzip_input_file_holder(const std::string& p_name)
                 : m_file(p_name, std::ios_base::in | std::ios_base::binary)
             {
-                m_filter.push(m_gzip);
+                m_filter.push(boost::iostreams::gzip_decompressor());
                 m_filter.push(m_file);
             }
 
@@ -156,7 +156,6 @@ namespace varoom
 
         private:
             std::ifstream m_file;
-            boost::iostreams::gzip_decompressor m_gzip;
             boost::iostreams::filtering_istream m_filter;
         };
 
@@ -177,6 +176,8 @@ namespace varoom
 
             ~gzip_output_file_holder()
             {
+                m_filter.flush();
+                m_filter.pop();
             }
 
         private:
@@ -231,7 +232,7 @@ namespace varoom
             gzip_input_string_file_holder(const std::string& p_content)
                 : m_file(p_content, std::ios_base::in | std::ios_base::binary)
             {
-                m_filter.push(m_gzip);
+                m_filter.push(boost::iostreams::gzip_decompressor());
                 m_filter.push(m_file);
             }
 
@@ -242,7 +243,6 @@ namespace varoom
 
         private:
             std::istringstream m_file;
-            boost::iostreams::gzip_decompressor m_gzip;
             boost::iostreams::filtering_istream m_filter;
         };
 
@@ -252,7 +252,7 @@ namespace varoom
             gzip_output_string_file_holder(std::map<std::string,std::string>& p_files, const std::string& p_name)
                 : m_files(p_files), m_name(p_name), m_file(std::ios_base::out | std::ios_base::binary)
             {
-                m_filter.push(m_gzip);
+                m_filter.push(boost::iostreams::gzip_compressor());
                 m_filter.push(m_file);
             }
 
@@ -263,6 +263,8 @@ namespace varoom
 
             ~gzip_output_string_file_holder()
             {
+                m_filter.flush();
+                m_filter.pop();
                 m_files[m_name] = m_file.str();
             }
 
@@ -270,7 +272,6 @@ namespace varoom
             std::map<std::string,std::string>& m_files;
             const std::string m_name;
             std::ostringstream m_file;
-            boost::iostreams::gzip_compressor m_gzip;
             boost::iostreams::filtering_ostream m_filter;
         };
 

@@ -7,6 +7,7 @@
 
 #include <boost/any.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/range/iterator_range.hpp>
 
 namespace varoom
 {

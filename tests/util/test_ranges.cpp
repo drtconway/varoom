@@ -6,6 +6,7 @@
 
 #include <random>
 #include <boost/lexical_cast.hpp>
+#include <boost/range/iterator_range.hpp>
 #include "varoom/util/bitstream.hpp"
 #include "varoom/util/elias_fano.hpp"
 #include "varoom/util/files.hpp"
@@ -291,11 +292,11 @@ BOOST_AUTO_TEST_CASE( succinct_ranges_1 )
     }
 
     {
-        varoom::output_file_holder_ptr outp = varoom::files::out("tests/tmp/foo.gz");
+        varoom::output_file_holder_ptr outp = varoom::files::out("tests/tmp/foo");
         r.save(**outp);
     }
     {
-        varoom::input_file_holder_ptr inp = varoom::files::in("tests/tmp/foo.gz");
+        varoom::input_file_holder_ptr inp = varoom::files::in("tests/tmp/foo");
         r.load(**inp);
     }
 

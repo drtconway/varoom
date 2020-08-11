@@ -5,6 +5,7 @@
 #include "varoom/klbam/types.hpp"
 
 #include <boost/lexical_cast.hpp>
+#include <boost/range/iterator_range.hpp>
 
 using namespace std;
 using namespace boost;

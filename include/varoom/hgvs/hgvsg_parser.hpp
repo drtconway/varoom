@@ -8,6 +8,7 @@
 #include <initializer_list>
 #include <regex>
 #include <boost/lexical_cast.hpp>
+#include <boost/range/iterator_range.hpp>
 
 namespace varoom
 {

@@ -7,6 +7,7 @@
 #include <tuple>
 #include <vector>
 #include <boost/lexical_cast.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #ifndef VAROOM_UTIL_SUBTEXT_HPP
 #include "varoom/util/subtext.hpp"

@@ -60,7 +60,8 @@ namespace varoom
 
             static std::initializer_list<std::string> labels()
             {
-                return {"chr", "pos", "nA", "nC", "nG", "nT", "nN", "nX0", "nX1", "nI", "nD", "indels"};
+                static std::initializer_list<std::string> l = {"chr", "pos", "nA", "nC", "nG", "nT", "nN", "nX0", "nX1", "nI", "nD", "indels"};
+                return l;
             }
         };
 
@@ -79,7 +80,8 @@ namespace varoom
 
             static std::initializer_list<std::string> labels()
             {
-                return {"gene", "len", "cnt"};
+                static std::initializer_list<std::string> l = {"gene", "len", "cnt"};
+                return l;
             }
         };
 
@@ -99,7 +101,8 @@ namespace varoom
 
             static std::initializer_list<std::string> labels()
             {
-                return {"chr", "pos", "kld", "pval"};
+                static std::initializer_list<std::string> l = {"chr", "pos", "kld", "pval"};
+                return l;
             }
         };
 
@@ -123,7 +126,8 @@ namespace varoom
 
             static std::initializer_list<std::string> labels()
             {
-                return {"chr", "pos", "n", "sx", "slx", "sxlx", "k", "theta"};
+                static std::initializer_list<std::string> l = {"chr", "pos", "n", "sx", "slx", "sxlx", "k", "theta"};
+                return l;
             }
         };
 

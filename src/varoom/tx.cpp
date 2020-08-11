@@ -57,7 +57,8 @@ namespace // anonymous
 
         static std::initializer_list<std::string> labels()
         {
-            return {"bin", "name", "chrom", "strand", "txStart", "txEnd", "cdsStart", "cdsEnd", "exonCount", "exonStarts", "exonEnds", "score", "name2", "cdsStartStat", "cdsEndStat", "exonFrames"};
+            static std::initializer_list<std::string> l = {"bin", "name", "chrom", "strand", "txStart", "txEnd", "cdsStart", "cdsEnd", "exonCount", "exonStarts", "exonEnds", "score", "name2", "cdsStartStat", "cdsEndStat", "exonFrames"};
+            return l;
         }
     };
 

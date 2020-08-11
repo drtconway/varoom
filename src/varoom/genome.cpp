@@ -1,7 +1,9 @@
 #include "varoom/command.hpp"
-#include "varoom/seq/index.hpp"
+#include "varoom/seq/fasta.hpp"
+#include "varoom/util/files.hpp"
+#include "varoom/kmers.hpp"
 
-#include <cmath>
+#include <unordered_map>
 
 using namespace std;
 using namespace boost;
@@ -12,6 +14,75 @@ namespace // anonymous
 {
 
     using strings = vector<string>;
+    using count_and_lastpos = std::pair<size_t,size_t>;
+
+    template <typename K, typename V, typename U>
+    class buffered_unordered_map : public unordered_map<K,V>
+    {
+    public:
+        using item_type = std::pair<K, U>;
+        using items_type = std::vector<item_type>;
+        using map_type = std::unordered_map<K,V>;
+        using acceptor_type = std::function<void(map_type&, typename items_type::const_iterator, typename items_type::const_iterator)>;
+        static constexpr size_t BufferMin = (1ULL << 16);
+
+        buffered_unordered_map(acceptor_type p_acceptor)
+            : m_buffer_max(BufferMin), m_acceptor(p_acceptor)
+        {
+        }
+
+        buffered_unordered_map& push_back(const item_type& p_item)
+        {
+            m_buffer.push_back(p_item);
+            if (m_buffer.size() >= m_buffer_max)
+            {
+                flush();
+            }
+            return *this;
+        }
+
+        void flush()
+        {
+            std::sort(m_buffer.begin(), m_buffer.end());
+            auto fst = m_buffer.begin();
+            auto lst = m_buffer.begin();
+            for (auto jtr = m_buffer.begin(); jtr != m_buffer.end(); ++jtr)
+            {
+                if (lst->first != jtr->first)
+                {
+                    m_acceptor(*this, fst, jtr);
+                    fst = jtr;
+                }
+                lst = jtr;
+            }
+            if (fst != m_buffer.end())
+            {
+                m_acceptor(*this, fst, m_buffer.end());
+            }
+            m_buffer.clear();
+        }
+
+    private:
+        items_type m_buffer;
+        size_t m_buffer_max;
+        acceptor_type m_acceptor;
+    };
+
+    void count_non_overlapping(unordered_map<kmer,size_t>& p_map,
+                               vector<pair<kmer,size_t>>::const_iterator p_begin, vector<pair<kmer,size_t>>::const_iterator p_end)
+    {
+        const size_t K = 20;
+        size_t last = 0;
+        for (auto itr = p_begin; itr != p_end; ++itr)
+        {
+            if (itr->second < last + K)
+            {
+                continue;
+            }
+            p_map[itr->first] += 1;
+            last = itr->second;
+        }
+    }
 
     class genome_command : public varoom::command
     {
@@ -24,7 +95,29 @@ namespace // anonymous
 
         virtual void operator()()
         {
-            varoom::seq::index::make(m_input_filenames, m_output_filename);
+            // varoom::seq::index::make(m_input_filenames, m_output_filename);
+            const size_t K = 20;
+            buffered_unordered_map<kmer,size_t, size_t> symCounts(count_non_overlapping);
+            for (size_t i = 0; i < m_input_filenames.size(); ++i)
+            {
+                std::cerr << "processing " << m_input_filenames[i] << std::endl;
+                input_file_holder_ptr inp = files::in(m_input_filenames[i]);
+                for (varoom::seq::fasta_reader r(**inp); r.more(); ++r)
+                {
+                    const fasta_read rd = *r;
+                    kmers::make(rd.second, K, [&](kmer_and_pos xp) mutable {
+                        symCounts.push_back(xp);
+                    });
+                }
+            }
+            symCounts.flush();
+            for (auto itr = symCounts.begin(); itr != symCounts.end(); ++itr)
+            {
+                if (itr->second > 1)
+                {
+                    cout << kmers::render(K, itr->first) << '\t' << itr->second << endl;
+                }
+            }
         }
 
     private:
